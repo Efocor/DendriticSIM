@@ -309,13 +309,13 @@ def main():
     """Bucle principal del programa con GUI moderna."""
     global selected_field
 
-    # Inicialización base
+    #inicialización base
     pygame.init()
     screen = pygame.display.set_mode((1200, 800))
     pygame.display.set_caption("DLA Simulation Suite")
     clock = pygame.time.Clock()
 
-    # Colores modernos
+    #colores modernos
     COLORS = {
         'background': (15, 15, 25),
         'panel': (25, 28, 40),
@@ -329,7 +329,7 @@ def main():
         'button_hover': (85, 125, 245)
     }
 
-    # Fuentes
+    #fuentes
     FONTS = {
         'title': pygame.font.SysFont("Segoe UI", 36, bold=True),
         'subtitle': pygame.font.SysFont("Segoe UI", 24),
@@ -337,7 +337,7 @@ def main():
         'input': pygame.font.SysFont("Segoe UI", 18)
     }
 
-    # Clase para botones modernos
+    #clase para botones modernos
     class ModernButton:
         def __init__(self, x, y, width, height, text, color, hover_color):
             self.rect = pygame.Rect(x, y, width, height)
@@ -349,20 +349,20 @@ def main():
         def draw(self, surface):
             color = self.hover_color if self.is_hovered else self.color
             
-            # Dibujar sombra
+            #dibujar sombra
             shadow_rect = self.rect.copy()
             shadow_rect.y += 2
             pygame.draw.rect(surface, (0, 0, 0, 128), shadow_rect, border_radius=10)
             
-            # Dibujar botón
+            #dibujar botón
             pygame.draw.rect(surface, color, self.rect, border_radius=10)
             
-            # Efecto de brillo en hover
+            #efecto de brillo en hover
             if self.is_hovered:
                 pygame.draw.rect(surface, (255, 255, 255, 30), self.rect, 
                                border_radius=10, width=2)
 
-            # Texto del botón
+            #texto del botón
             text_surf = FONTS['text'].render(self.text, True, COLORS['text'])
             text_rect = text_surf.get_rect(center=self.rect.center)
             surface.blit(text_surf, text_rect)
@@ -372,25 +372,25 @@ def main():
                 self.is_hovered = self.rect.collidepoint(event.pos)
             return self.is_hovered and event.type == pygame.MOUSEBUTTONDOWN
 
-    # Crear botones
+    #crear botones
     start_button = ModernButton(900, 700, 250, 50, "INICIAR SIMULACIÓN", 
                                COLORS['button'], COLORS['button_hover'])
     help_button = ModernButton(50, 700, 250, 50, "AYUDA", 
                               COLORS['panel'], COLORS['input_active'])
 
-    # Variables de estado
+    #variables de estado
     running = True
     help_visible = False
     error_message = None
     error_timer = 0
 
-    # Posicionamiento de campos
+    #posicionamiento de campos
     margin_top = 150
     margin_left = 50
     vertical_spacing = 80
     x, y = margin_left, margin_top
 
-    # Organizar campos en dos columnas
+    #organizo campos en dos columnas
     for key, field in input_fields.items():
         if y + vertical_spacing > 650:
             y = margin_top
@@ -419,43 +419,43 @@ def main():
             rect = surf.get_rect(center=(600, 650))
             screen.blit(surf, rect)
 
-    # Bucle principal
+    #bucle principal
     while running:
-        # Dibujar fondo
+        #dibujar fondo
         draw_gradient_background()
 
-        # Título y subtítulo
+        #título y subtítulo
         title_surf = FONTS['title'].render("Suite Simulador DLA", True, COLORS['text'])
         subtitle_surf = FONTS['subtitle'].render("Diffusion Limited Aggregation", 
                                                True, COLORS['accent'])
         screen.blit(title_surf, (600 - title_surf.get_width()//2, 30))
         screen.blit(subtitle_surf, (600 - subtitle_surf.get_width()//2, 80))
 
-        # Panel principal
+        #panel principal
         main_panel = pygame.Rect(30, 120, 1140, 560)
         draw_panel(main_panel, COLORS['panel'])
 
-        # Dibujar campos de entrada
+        #dibujar campos de entrada
         for key, field in input_fields.items():
             # Título del campo
             title_surf = FONTS['text'].render(field["label"], True, COLORS['text'])
             screen.blit(title_surf, (field["pos"][0], field["pos"][1] - 29))
 
-            # Cuadro de entrada
+            #cuadro de entrada
             input_rect = pygame.Rect(field["pos"][0], field["pos"][1], 300, 40)
             color = COLORS['input_active'] if selected_field == key else COLORS['input_bg']
             pygame.draw.rect(screen, color, input_rect, border_radius=8)
             pygame.draw.rect(screen, COLORS['accent'], input_rect, 2, border_radius=8)
 
-            # Valor
+            #valor
             value_surf = FONTS['input'].render(field["value"], True, COLORS['text'])
             screen.blit(value_surf, (input_rect.x + 10, input_rect.y + 10))
 
-        # Dibujar botones
+        #dibujar botones
         start_button.draw(screen)
         help_button.draw(screen)
 
-        # Panel de ayuda
+        #panel de ayuda
         if help_visible:
             help_panel = pygame.Rect(200, 150, 800, 500)
             draw_panel(help_panel, COLORS['panel'])
@@ -482,17 +482,17 @@ def main():
                 text_surf = FONTS['text'].render(text, True, COLORS['text'])
                 screen.blit(text_surf, (220, 220 + i * 30))
 
-        # Mensaje de error
+        #mensaje de error
         draw_error_message()
         if error_timer > 0:
             error_timer -= 1
 
-        # Manejo de eventos
+        #manejo de eventos
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-            # Entrada de texto
+            #entrada de texto
             if event.type == pygame.MOUSEBUTTONDOWN:
                 selected_field = None
                 pos = event.pos
@@ -509,7 +509,7 @@ def main():
                 elif event.unicode.isnumeric() or event.unicode == '.':
                     input_fields[selected_field]["value"] += event.unicode
 
-            # Botones
+            #botones
             if start_button.handle_event(event):
                 try:
                     for key in config:
@@ -521,7 +521,7 @@ def main():
                     start_simulation(config)
                 except ValueError as e:
                     error_message = f"Error: {str(e)}"
-                    error_timer = 180  # 3 segundos a 60 FPS
+                    error_timer = 180  #3 segundos a 60 FPS
 
             if help_button.handle_event(event):
                 help_visible = not help_visible
