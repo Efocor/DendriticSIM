@@ -18,7 +18,7 @@ from datetime import datetime
 pygame.init()
 
 #configuración inicial
-DEFAULT_WIDTH, DEFAULT_HEIGHT = 800, 600
+DEFAULT_WIDTH, DEFAULT_HEIGHT = 1200, 800
 screen = pygame.display.set_mode((DEFAULT_WIDTH, DEFAULT_HEIGHT))
 pygame.display.set_caption("Simulación DLA Avanzada")
 clock = pygame.time.Clock()
@@ -41,9 +41,9 @@ config = {
     "grid_size": 100, #tamaño de la cuadrícula
     "max_steps": 500, #pasos máximos
     "sticking_prob": 50,  #en porcentaje (50%)
-    "wind_direction": 0,  #0: Sin viento, 1: Norte, 2: Sur, 3: Este, 4: Oeste
+    "wind_direction": 0,  #0: Sin viento, 1: Norte, 2: Oeste, 3: Sur, 4: Este
     "wind_strength": 20,  #en porcentaje (20%)
-    "neighbor_type": 4,   #4 o 8
+    "neighbor_type": 4,   #4 o 8. Esto se refiere si se consideran 4 o 8 vecinos
 }
 
 #los campos que permiten cambios
@@ -55,6 +55,8 @@ input_fields = {
     "wind_direction": {"label": "Dirección del viento (0-4)", "value": "0", "pos": (100, 350)},
     "wind_strength": {"label": "Fuerza del viento (%)", "value": "20", "pos": (100, 400)},
     "neighbor_type": {"label": "Tipo de vecinos (4 u 8)", "value": "4", "pos": (100, 450)},
+    "grid_shape": {"label": "Forma del grid (1:Cuad, 2:Circ)", "value": "1", "pos": (100, 500)},
+    "seed_shape": {"label": "Forma semilla (1:Norm, 2:Triang, 3:Circ)", "value": "1", "pos": (100, 550)},
 }
 
 selected_field = None
@@ -106,7 +108,7 @@ def calculate_distances(grid, seed_pos):
 def save_simulation(surface):
     """Guarda la simulación como imagen."""
     if not os.path.exists("simulaciones_dla"):
-        os.makedirs("simulaciones_dla")
+        os.makedirs("simulaciones_dla", exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"simulaciones_dla/dla_simulation_{timestamp}.png"
@@ -303,119 +305,229 @@ def handle_input(event):
             #agregar un dígito al valor actual
             input_fields[selected_field]["value"] += event.unicode
 
-
 def main():
-    """Bucle principal del programa."""
+    """Bucle principal del programa con GUI moderna."""
     global selected_field
+
+    # Inicialización base
     pygame.init()
-    screen = pygame.display.set_mode((800, 600))
-    pygame.display.set_caption("Simulación DLA")
-
+    screen = pygame.display.set_mode((1200, 800))
+    pygame.display.set_caption("DLA Simulation Suite")
     clock = pygame.time.Clock()
+
+    # Colores modernos
+    COLORS = {
+        'background': (15, 15, 25),
+        'panel': (25, 28, 40),
+        'accent': (65, 105, 225),
+        'text': (220, 220, 240),
+        'success': (46, 204, 113),
+        'warning': (231, 76, 60),
+        'input_bg': (35, 38, 50),
+        'input_active': (45, 48, 60),
+        'button': (65, 105, 225),
+        'button_hover': (85, 125, 245)
+    }
+
+    # Fuentes
+    FONTS = {
+        'title': pygame.font.SysFont("Segoe UI", 36, bold=True),
+        'subtitle': pygame.font.SysFont("Segoe UI", 24),
+        'text': pygame.font.SysFont("Segoe UI", 20),
+        'input': pygame.font.SysFont("Segoe UI", 18)
+    }
+
+    # Clase para botones modernos
+    class ModernButton:
+        def __init__(self, x, y, width, height, text, color, hover_color):
+            self.rect = pygame.Rect(x, y, width, height)
+            self.text = text
+            self.color = color
+            self.hover_color = hover_color
+            self.is_hovered = False
+
+        def draw(self, surface):
+            color = self.hover_color if self.is_hovered else self.color
+            
+            # Dibujar sombra
+            shadow_rect = self.rect.copy()
+            shadow_rect.y += 2
+            pygame.draw.rect(surface, (0, 0, 0, 128), shadow_rect, border_radius=10)
+            
+            # Dibujar botón
+            pygame.draw.rect(surface, color, self.rect, border_radius=10)
+            
+            # Efecto de brillo en hover
+            if self.is_hovered:
+                pygame.draw.rect(surface, (255, 255, 255, 30), self.rect, 
+                               border_radius=10, width=2)
+
+            # Texto del botón
+            text_surf = FONTS['text'].render(self.text, True, COLORS['text'])
+            text_rect = text_surf.get_rect(center=self.rect.center)
+            surface.blit(text_surf, text_rect)
+
+        def handle_event(self, event):
+            if event.type == pygame.MOUSEMOTION:
+                self.is_hovered = self.rect.collidepoint(event.pos)
+            return self.is_hovered and event.type == pygame.MOUSEBUTTONDOWN
+
+    # Crear botones
+    start_button = ModernButton(900, 700, 250, 50, "INICIAR SIMULACIÓN", 
+                               COLORS['button'], COLORS['button_hover'])
+    help_button = ModernButton(50, 700, 250, 50, "AYUDA", 
+                              COLORS['panel'], COLORS['input_active'])
+
+    # Variables de estado
     running = True
+    help_visible = False
+    error_message = None
+    error_timer = 0
 
-    start_button = Button(600, 500, 150, 50, "Iniciar", (50, 150, 50), (70, 200, 70))
-    
-    #botoncito de ayuda (posicionado opuesto al botón de iniciar)
-    help_button = Button(30, 500, 150, 50, "Ayuda", (150, 50, 50), (200, 70, 70))
-
-    #posicionamiento dinámico de campos de entrada
-    margin_top = 70
-    margin_left = 70
-    vertical_spacing = 80  #espacio entre campos
-    max_visible_height = 650 - margin_top - 100  #altura máxima antes de superposición
+    # Posicionamiento de campos
+    margin_top = 150
+    margin_left = 50
+    vertical_spacing = 80
     x, y = margin_left, margin_top
 
-    #calcular posición inicial de cada campo
+    # Organizar campos en dos columnas
     for key, field in input_fields.items():
-        if y + vertical_spacing > max_visible_height:  #si excede el límite, cambiar de columna
+        if y + vertical_spacing > 650:
             y = margin_top
-            x += 350  #nueva columna (ancho del cuadro + margen)
-
+            x += 400
         field["pos"] = (x, y)
         y += vertical_spacing
 
-    #variables de estado del cuadro de ayuda
-    help_visible = False
-    
+    def draw_gradient_background():
+        """Dibuja un fondo con gradiente"""
+        for y in range(800):
+            darkness = 1 - (y / 800) * 0.3
+            color = tuple(int(c * darkness) for c in COLORS['background'])
+            pygame.draw.line(screen, color, (0, y), (1200, y))
+
+    def draw_panel(rect, color):
+        """Dibuja un panel con sombra y bordes redondeados"""
+        shadow_rect = rect.copy()
+        shadow_rect.y += 3
+        pygame.draw.rect(screen, (0, 0, 0, 128), shadow_rect, border_radius=15)
+        pygame.draw.rect(screen, color, rect, border_radius=15)
+
+    def draw_error_message():
+        """Dibuja mensaje de error con animación"""
+        if error_message and error_timer > 0:
+            surf = FONTS['text'].render(error_message, True, COLORS['warning'])
+            rect = surf.get_rect(center=(600, 650))
+            screen.blit(surf, rect)
+
+    # Bucle principal
     while running:
-        screen.fill((30, 30, 30))
+        # Dibujar fondo
+        draw_gradient_background()
 
-        #dibujar campos de entrada con sus títulos
+        # Título y subtítulo
+        title_surf = FONTS['title'].render("Suite Simulador DLA", True, COLORS['text'])
+        subtitle_surf = FONTS['subtitle'].render("Diffusion Limited Aggregation", 
+                                               True, COLORS['accent'])
+        screen.blit(title_surf, (600 - title_surf.get_width()//2, 30))
+        screen.blit(subtitle_surf, (600 - subtitle_surf.get_width()//2, 80))
+
+        # Panel principal
+        main_panel = pygame.Rect(30, 120, 1140, 560)
+        draw_panel(main_panel, COLORS['panel'])
+
+        # Dibujar campos de entrada
         for key, field in input_fields.items():
-            #título del campo
-            title_surface = FONT.render(field["label"], True, TEXT_COLOR)
-            screen.blit(title_surface, (field["pos"][0], field["pos"][1] - 31))  # Posicionar el título arriba del cuadro
+            # Título del campo
+            title_surf = FONTS['text'].render(field["label"], True, COLORS['text'])
+            screen.blit(title_surf, (field["pos"][0], field["pos"][1] - 29))
 
-            #cuadro de entrada
-            pygame.draw.rect(screen, (50, 50, 50), (*field["pos"], 300, 40))
-            pygame.draw.rect(screen, TEXT_COLOR, (*field["pos"], 300, 40), 2)
+            # Cuadro de entrada
+            input_rect = pygame.Rect(field["pos"][0], field["pos"][1], 300, 40)
+            color = COLORS['input_active'] if selected_field == key else COLORS['input_bg']
+            pygame.draw.rect(screen, color, input_rect, border_radius=8)
+            pygame.draw.rect(screen, COLORS['accent'], input_rect, 2, border_radius=8)
 
-            #valor ingresado
-            value_surface = FONT.render(field["value"], True, TEXT_COLOR)
-            screen.blit(value_surface, (field["pos"][0] + 10, field["pos"][1] + 5))
+            # Valor
+            value_surf = FONTS['input'].render(field["value"], True, COLORS['text'])
+            screen.blit(value_surf, (input_rect.x + 10, input_rect.y + 10))
 
-        #dibujar el botón de inicio y ayuda
+        # Dibujar botones
         start_button.draw(screen)
         help_button.draw(screen)
-        
-        #mostrar el cuadro de ayuda si se ha activado
-        if help_visible:
-            #fondo semi-transparente
-            pygame.draw.rect(screen, (0, 0, 0, 180), (100, 100, 600, 400))
-            #título del cuadro de ayuda
-            help_title = FONT.render("Ayuda: Explicación de los campos", True, TEXT_COLOR)
-            screen.blit(help_title, (260, 110))
 
-            #descripciones de los campos
-            help_text = [
-                "1. Probabilidad de adherencia (0-100%)",
-                "2. Fuerza del viento (0-100%)",
-                "3. Tipo de vecinos (4 o 8)",
-                "4. Número de partículas a agregar",
-                "5. Tamaño de la cuadrícula (Cuadrado de 100 a 200)",
-                "6. Pasos máximos por partícula (100 a 1000)",
-                "7. Dirección del viento (1 a 4)",
-                "Nota: Los valores fuera de rango se ajustarán automáticamente.",
-                "Pasos, indica que tan lejos se moverá una partícula por iteración.",
-                "La dirección del viento es: 1: Norte, 2: Sur, 3: Este, 4: Oeste."
+        # Panel de ayuda
+        if help_visible:
+            help_panel = pygame.Rect(200, 150, 800, 500)
+            draw_panel(help_panel, COLORS['panel'])
+            
+            help_title = FONTS['subtitle'].render("Guía de Configuración", True, COLORS['accent'])
+            screen.blit(help_title, (help_panel.centerx - help_title.get_width()//2, 170))
+
+            help_texts = [
+                "• Número de partículas: Cantidad total de partículas a simular",
+                "• Tamaño de cuadrícula: Dimensiones del espacio de simulación",
+                "• Pasos máximos: Límite de movimientos por partícula",
+                "• Probabilidad de adhesión: Chance de que una partícula se adhiera (%)",
+                "• Dirección del viento: 1: Norte, 2: Sur, 3: Este, 4: Oeste",
+                "• Fuerza del viento: Intensidad del efecto del viento (%)",
+                "• Tipo de vecinos: 4 para von Neumann, 8 para Moore",
+                "No implementadas:",
+                "• Forma del grid: 1 para cuadrado, 2 para círculo",
+                "• Forma de la semilla: 1 para normal, 2 para triangular, 3 para circular",
+                "",
+                "Los valores fuera de rango se ajustarán automáticamente.",
             ]
 
-            #dibujar las explicaciones (del ayuda)
-            for i, text in enumerate(help_text):
-                text_surface = FONT.render(text, True, TEXT_COLOR)
-                screen.blit(text_surface, (120, 150 + i * 30))
+            for i, text in enumerate(help_texts):
+                text_surf = FONTS['text'].render(text, True, COLORS['text'])
+                screen.blit(text_surf, (220, 220 + i * 30))
 
+        # Mensaje de error
+        draw_error_message()
+        if error_timer > 0:
+            error_timer -= 1
+
+        # Manejo de eventos
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-            #manejar eventos de los campos de entrada
-            handle_input(event)
+            # Entrada de texto
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                selected_field = None
+                pos = event.pos
+                for key, field in input_fields.items():
+                    input_rect = pygame.Rect(field["pos"][0], field["pos"][1], 300, 40)
+                    if input_rect.collidepoint(pos):
+                        selected_field = key
 
-            #manejar evento del botón de inicio
+            if event.type == pygame.KEYDOWN and selected_field:
+                if event.key == pygame.K_BACKSPACE:
+                    input_fields[selected_field]["value"] = input_fields[selected_field]["value"][:-1]
+                elif event.key == pygame.K_RETURN:
+                    selected_field = None
+                elif event.unicode.isnumeric() or event.unicode == '.':
+                    input_fields[selected_field]["value"] += event.unicode
+
+            # Botones
             if start_button.handle_event(event):
                 try:
                     for key in config:
-                        if key in ["sticking_prob", "wind_strength"]:  #porcentajes
-                            value = int(input_fields[key]["value"])
-                            if 0 <= value <= 100:
-                                config[key] = value
-                            else:
-                                raise ValueError(f"{key} debe estar entre 0 y 100.")
-                        elif key in ["neighbor_type", "num_particles", "grid_size", "max_steps", "wind_direction"]:  # Valores enteros
-                            value = int(input_fields[key]["value"])
-                            config[key] = value
+                        value = int(input_fields[key]["value"])
+                        if key in ["sticking_prob", "wind_strength"]:
+                            if not (0 <= value <= 100):
+                                raise ValueError(f"{key} debe estar entre 0 y 100")
+                        config[key] = value
                     start_simulation(config)
                 except ValueError as e:
-                    print(f"Error: {e}")
-                    
-            #manejar evento del botón de ayuda
+                    error_message = f"Error: {str(e)}"
+                    error_timer = 180  # 3 segundos a 60 FPS
+
             if help_button.handle_event(event):
-                help_visible = not help_visible  #alterna la visibilidad del cuadro de ayuda
+                help_visible = not help_visible
 
         pygame.display.flip()
-        clock.tick(30)
+        clock.tick(60)
 
     pygame.quit()
 
