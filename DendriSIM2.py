@@ -4,12 +4,19 @@
 # Objetivo: Implementar una simulación de DLA (agregación limitada por difusión).
 # Descripción: La idea es ver patrones de solidificación dendrítica en un sistema de partículas.
 # Lenguaje: Python
+# Autor : Felipe Alexander Correa Rodríguez
 #-------------------------------------------------------------------------------------------
 
 """
 El programa se divide en dos partes principales:
 1. Interfaz de usuario moderna: Musestra una pantalla de inicio con animaciones simples y una interfaz de usuario moderna para configurar la simulación DLA.
 2. Simulación DLA: Implementa la simulación DLA con opciones de configuración avanzadas y visualización en tiempo real.
+3. Análisis de datos: Genera análisis detallado de la simulación DLA incluyendo distribución radial, dimensión fractal, anisotropía, densidad de ramificación y métricas adicionales.
+(La dimensión fractal es un concepto matemático que se utiliza para describir la complejidad de una estructura fractal, como la simulación DLA.)
+(La anisotropía es una medida de la variabilidad direccional de una estructura, en este caso, la distribución de partículas en la simulación DLA.)
+(La densidad de ramificación es una medida de la cantidad de ramas o estructuras secundarias en la simulación DLA.)
+(Las métricas adicionales incluyen estadísticas generales sobre la simulación DLA, como el número total de partículas, el tiempo total de simulación, la distancia media, la tasa de crecimiento y la dimensión fractal.)
+(¡La simulación DLA es un modelo computacional que simula el crecimiento de estructuras dendríticas mediante la agregación limitada por difusión de partículas en un espacio bidimensional!)
 
 La simulación DLA se puede configurar con los siguientes parámetros:
 - Número de partículas: Cantidad total de partículas a simular. (3000 por defecto, más partículas hacen más lenta la simulación)
@@ -35,6 +42,8 @@ Controles:
 Nota: La simulación puede ser lenta con muchos parámetros o partículas, se recomienda ajustar los valores para obtener una simulación más rápida.
 
 *El código está en mitad español y mitad inglés según fue cómodo al programar.
+
+Por Feri.
 """
 
 #--------apertura--------
@@ -212,6 +221,10 @@ def genera_graficos_analisis(particle_positions, growth_times, grid_size):
     - Análisis de anisotropía
     - Densidad de ramificación
     """
+    #guardar el backend actual y cambiar a 'Agg' (no interactivo)
+    current_backend = plt.get_backend()
+    plt.switch_backend('Agg')
+    
     #configuración general de estilo
     plt.style.use('dark_background')
     plt.rcParams.update({
@@ -221,7 +234,7 @@ def genera_graficos_analisis(particle_positions, growth_times, grid_size):
         'figure.titlesize': 16
     })
 
-    #crear figura principal con subplots
+    #crea figura sin mostrarla, solo para hacer el .png
     fig = plt.figure(figsize=(15, 10))
     fig.suptitle('Análisis detallado del crecimiento dendrítico', fontsize=16, y=0.95)
 
@@ -235,7 +248,6 @@ def genera_graficos_analisis(particle_positions, growth_times, grid_size):
     hist, bins, _ = ax1.hist(distances, bins=40, density=True, alpha=0.7, 
                             color='skyblue', edgecolor='white')
     #ajuste de curva
-    from scipy.stats import gaussian_kde
     kde = gaussian_kde(distances)
     x_range = np.linspace(min(distances), max(distances), 100)
     ax1.plot(x_range, kde(x_range), 'r-', lw=2, label='KDE')
@@ -314,11 +326,17 @@ def genera_graficos_analisis(particle_positions, growth_times, grid_size):
     #ajustes finales
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     
-    #guardar y mostrar
+    #guardar
     if not os.path.exists("simulaciones_dla"):
         os.makedirs("simulaciones_dla", exist_ok=True)
-    plt.savefig('simulaciones_dla/analisis_dla_detallado.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'simulaciones_dla/analisis_dla_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png', dpi=300, bbox_inches='tight')
 
+    #cerrar el coso
+    plt.close(fig)
+    
+    # Restaurar el backend original
+    plt.switch_backend(current_backend)
+    
     #generar informe adicional de métricas
     genera_informe_metricas(particle_positions, growth_times, distances, slope)
 
@@ -326,7 +344,7 @@ def genera_informe_metricas(particle_positions, growth_times, distances, dim_fra
     """Genera un archivo de texto con métricas adicionales."""
     if not os.path.exists("simulaciones_dla"):
         os.makedirs("simulaciones_dla", exist_ok=True)
-    with open("simulaciones_dla/metricas_dla.txt", "w") as f:
+    with open(f"simulaciones_dla/metricas_dla_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt", "w") as f:
         f.write("ANÁLISIS DETALLADO DE LA SIMULACIÓN DLA\n")
         f.write("=====================================\n\n")
         
@@ -347,7 +365,23 @@ def genera_informe_metricas(particle_positions, growth_times, distances, dim_fra
         f.write(f"Tasa promedio: {len(particle_positions)/growth_times[-1]:.2f} partículas/s\n")
         f.write(f"Tiempo promedio entre adhesiones: {np.mean(growth_rates):.3f} s\n")
         f.write(f"Variación en tasa de crecimiento: {np.std(growth_rates):.3f} s\n")
+        
+        f.write('Explicación de las métricas\n')
+        f.write('=========================\n\n')
+        f.write('Número total de partículas: Cantidad total de partículas en la simulación.\n')
+        f.write('Tiempo total de simulación: Duración total de la simulación en segundos.\n')
+        f.write('Dimensión fractal: La dimensión fractal es sobre la estructura de la simulación, es decir cuán fractal es.\n\n')
+        f.write('Distancia media: Distancia media de las partículas al centro.\n')
+        f.write('Distancia máxima: Distancia máxima de las partículas al centro.\n')
+        f.write('Desviación estándar: Desviación estándar de las distancias al centro.\n\n')
+        f.write('Tasa promedio: Tasa promedio de adhesión de partículas por segundo.\n')
+        f.write('Tiempo promedio entre adhesiones: Tiempo promedio entre adhesiones sucesivas.\n')
+        f.write('Variación en tasa de crecimiento: Variación en el tiempo entre adhesiones.\n')
+        pass
+        
+        print(f"Informe de métricas guardado en: {f.name}")
     
+#-------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------
 
 #simulación DLA
@@ -410,7 +444,7 @@ def comienzasimu(config):
 
     #botones
     save_button = Button(10, 10, 120, 40, "Guardar", COLOR_BOTON, COLOR_BOTONHOVER)
-    stats_button = Button(140, 10, 120, 40, "Ver Análisis", COLOR_BOTON, COLOR_BOTONHOVER)
+    stats_button = Button(140, 10, 120, 40, "Analizar", COLOR_BOTON, COLOR_BOTONHOVER)
     particles_added = len(particle_positions)
     running = True
 
@@ -428,7 +462,7 @@ def comienzasimu(config):
                 print(f"Simulación guardada como: {filename}")
             if stats_button.eventoaccion(event):
                 genera_graficos_analisis(particle_positions, growth_times, grid_size)
-        
+                
         if particles_added < num_particles:
             for _ in range(min(5, num_particles - particles_added)):
                 #genera posición inicial válida
@@ -584,7 +618,7 @@ def welcomefe(screen, COLORS, FONTS):
         title_surf = FONTS['title'].render("DendriSIM", True, COLORS['text'])
         subtitle_surf = FONTS['subtitle'].render("Simulador de Agregación Limitada por Difusión", 
                                                True, COLORS['accent'])
-        version_surf = FONTS['text'].render("v2.0", True, COLORS['text'])
+        version_surf = FONTS['text'].render("v2.1", True, COLORS['text'])
         
         #aplicar escala al logo
         scaled_title = pygame.transform.scale(title_surf, 
