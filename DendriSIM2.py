@@ -109,7 +109,7 @@ input_fields = {
     "num_particles": {"label": "Número de partículas", "value": "3000", "pos": (100, 150)},
     "grid_size": {"label": "Tamaño de la cuadrícula", "value": "100", "pos": (100, 200)},
     "max_steps": {"label": "Pasos máximos", "value": "500", "pos": (100, 250)},
-    "sticking_prob": {"label": "Probabilidad de adhesión (%)", "value": "50", "pos": (100, 300)},
+    "sticking_prob": {"label": "Probabilidad de difusión (%)", "value": "50", "pos": (100, 300)},
     "wind_direction": {"label": "Dirección del viento (0-4)", "value": "0", "pos": (100, 350)},
     "wind_strength": {"label": "Fuerza del viento (%)", "value": "20", "pos": (100, 400)},
     "neighbor_type": {"label": "Tipo de vecinos (4 u 8)", "value": "4", "pos": (100, 450)},
@@ -1692,7 +1692,8 @@ def configavanzasim():
         "4b": "Prob: 0.1(1p), 0.5(2p), 0.9(3+p)",
         "4c": "Prob: 0.01(1-2p), 0.03(3p), 1.0(4+p)",
         "5": "Enlaces en línea recta (4 vecinos)",
-        "6": "Enlaces en línea recta (8 vecinos)"
+        "6": "Enlaces en línea recta (8 vecinos)",
+        "7": "Probabilidades variables durante la simulación"
     }
     
     info = {
@@ -1707,14 +1708,18 @@ Genera estructuras más densas y compactas""",
         "5": """Adherencia preferente en línea recta (4 direcciones)
 Produce patrones cristalinos direccionales""",
         "6": """Similar a exp.5 pero con 8 direcciones
-Permite crecimiento en diagonales"""
+Permite crecimiento en diagonales""",
+        "7": """Cambio dinámico de probabilidades:
+0-100 partículas: Como exp.4b (0.1, 0.5, 0.9)
+101-200 partículas: Como exp.4c (0.01, 0.03, 1.0)
+201+ partículas: Como exp.4a (0.2*contactos)"""
     }
 
     #crea campos de entrada
     inputs = {
         'part': InputBox(150, 200, 250, 40, "Número de partículas", "2000"),
         'size': InputBox(150, 300, 250, 40, "Tamaño de cuadrícula", "150"),
-        'exp': InputBox(150, 400, 250, 40, "Experimento (3-6)", "4a")
+        'exp': InputBox(150, 400, 250, 40, "Experimento (3-7)", "4a")
     }
     
     #crea los botones
@@ -1722,8 +1727,8 @@ Permite crecimiento en diagonales"""
     btn_back = Button(200, 600, 200, 50, "VOLVER")
     btn_info = Button(800, 50, 150, 40, "INFO")
     
-    FONT_NORMAL = pygame.font.Font(None, 28)
-    FONT_SMALL = pygame.font.Font(None, 20)
+    FONT_NORMAL = pygame.font.Font(None, 21)
+    FONT_SMALL = pygame.font.Font(None, 16)
     show_info = False
     running = True
     
@@ -1782,12 +1787,12 @@ Permite crecimiento en diagonales"""
             for exp_id, exp_info in info.items():
                 title = FONT_NORMAL.render(f"Experimento {exp_id}", True, HIGHLIGHT)
                 info_surf.blit(title, (20, y))
-                y += 22
+                y += 16
                 
                 for line in exp_info.split('\n'):
                     text = FONT_SMALL.render(line, True, TEXT)
                     info_surf.blit(text, (40, y))
-                    y += 22
+                    y += 16
                 y += 10
             
             win.blit(info_surf, (150, 100))
@@ -1801,35 +1806,6 @@ def checklinearecta(grid, x, y, dx, dy):
     if 0 <= x + 2*dx < len(grid) and 0 <= y + 2*dy < len(grid):
         return grid[x + dx, y + dy] == 1 and grid[x + 2*dx, y + 2*dy] == 1
     return False
-
-def obtenerprobaadhe(grid, particle, contacts, experimento):
-    if experimento == "3":  #comenzamos desde el 3, 1 y 2 se pueden hacer en el simulador normal.
-        if contacts == 1: return 0.33
-        elif contacts == 2: return 0.67
-        elif contacts >= 3: return 1.0
-        return 0.0
-    elif experimento == "4a":
-        return min(0.2 * contacts, 0.8)
-    elif experimento == "4b":
-        if contacts == 1: return 0.1
-        elif contacts == 2: return 0.5
-        else: return 0.9
-    elif experimento == "4c":
-        if contacts <= 2: return 0.01
-        elif contacts == 3: return 0.03
-        else: return 1.0
-    elif experimento == "5":  #4 vecinos
-        base_prob = 0.1 * contacts
-        for dx, dy in [(0,1), (1,0), (0,-1), (-1,0)]:
-            if checklinearecta(grid, particle['x'], particle['y'], dx, dy):
-                return min(base_prob * 2, 0.9)
-        return base_prob
-    else:  #experimento 6 (8 vecinos)
-        base_prob = 0.1 * contacts
-        for dx, dy in [(0,1), (1,0), (0,-1), (-1,0), (1,1), (1,-1), (-1,1), (-1,-1)]:
-            if checklinearecta(grid, particle['x'], particle['y'], dx, dy):
-                return min(base_prob * 2, 0.9)
-        return base_prob
 
 def contarveci(grid, x, y, experimento):
     """Cuenta los vecinos según el experimento"""
@@ -1849,12 +1825,56 @@ def contarveci(grid, x, y, experimento):
             contacts += 1
     return contacts
 
+def obtenerprobaadhe(grid, particle, contacts, experimento, particles_added=0):
+    """Determina la probabilidad de adhesión según el experimento y número de contactos"""
+    if experimento == "3":  #comenzamos desde el 3, 1 y 2 se pueden hacer en el simulador normal.
+        if contacts == 1: return 0.33
+        elif contacts == 2: return 0.67
+        elif contacts >= 3: return 1.0
+        return 0.0
+    elif experimento == "4a":
+        return min(0.2 * contacts, 0.8)
+    elif experimento == "4b":
+        if contacts == 1: return 0.1
+        elif contacts == 2: return 0.5
+        else: return 0.9
+    elif experimento == "4c":
+        if contacts <= 2: return 0.01
+        elif contacts == 3: return 0.03
+        else: return 1.0
+    elif experimento == "5":  # 4 vecinos
+        base_prob = 0.1 * contacts
+        for dx, dy in [(0,1), (1,0), (0,-1), (-1,0)]:
+            if checklinearecta(grid, particle['x'], particle['y'], dx, dy):
+                return min(base_prob * 2, 0.9)
+        return base_prob
+    elif experimento == "6":  #experimento 6 (8 vecinos)
+        base_prob = 0.1 * contacts
+        for dx, dy in [(0,1), (1,0), (0,-1), (-1,0), (1,1), (1,-1), (-1,1), (-1,-1)]:
+            if checklinearecta(grid, particle['x'], particle['y'], dx, dy):
+                return min(base_prob * 2, 0.9)
+        return base_prob
+    elif experimento == "7":
+        # Primera fase (0-100 partículas): usar probabilidades de 4b
+        if particles_added <= 100:
+            if contacts == 1: return 0.1
+            elif contacts == 2: return 0.5
+            else: return 0.9
+        # Segunda fase (101-200 partículas): usar probabilidades de 4c
+        elif particles_added <= 200:
+            if contacts <= 2: return 0.01
+            elif contacts == 3: return 0.03
+            else: return 1.0
+        # Tercera fase (201+ partículas): usar probabilidades de 4a
+        else:
+            return min(0.2 * contacts, 0.8)
+
 def simulacionespecificaavanzada(config2):
     """Simulación DLA con diferentes probabilidades de adhesión"""
     SCREEN_SIZE = 800
     GRID_SIZE = min(max(int(config2.get("grid_size", 150)), 100), 200)  #valor por defecto 150
     NUM_PARTICLES = min(max(int(config2.get("num_particles", 2000)), 500), 5000)  #valor por defecto 2000
-    experimento = config2.get("experimento", "4a")  #valor por defecto 4a, o sea si se inicia se corre el exp. 4a
+    experimento = config2.get("experimento", "4a")  #valor por defecto 4a
    
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
@@ -1874,7 +1894,7 @@ def simulacionespecificaavanzada(config2):
     while running and particles_added < NUM_PARTICLES:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.display.set_mode((1200, 800))  #cambio aquí
+                pygame.display.set_mode((1200, 800))
                 running = False
             if boton_volver.eventoaccion(event):
                 pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
@@ -1896,7 +1916,7 @@ def simulacionespecificaavanzada(config2):
             contacts = contarveci(grid, particle['x'], particle['y'], experimento)
            
             if contacts > 0:
-                prob = obtenerprobaadhe(grid, particle, contacts, experimento)
+                prob = obtenerprobaadhe(grid, particle, contacts, experimento, particles_added)
                 if random.random() < prob:
                     grid[particle['x'], particle['y']] = 1
                     particles_added += 1
@@ -1950,6 +1970,13 @@ def simulacionespecificaavanzada(config2):
         progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
         text_surf = FONT.render(progress_text, True, COLOR_TEXTO)
         simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+
+        #mostrar fase actual para experimento 7
+        if experimento == "7":
+            fase = "Fase 1 (4b)" if particles_added <= 100 else "Fase 2 (4c)" if particles_added <= 200 else "Fase 3 (4a)"
+            phase_text = f"Fase actual: {fase}"
+            phase_surf = FONT.render(phase_text, True, COLOR_TEXTO)
+            simulation_screen.blit(phase_surf, (20, SCREEN_SIZE - 70))
        
         pygame.display.flip()
         pygame.time.wait(10)
@@ -2151,7 +2178,7 @@ def main():
                 "• Número de partículas: Cantidad total de partículas a simular",
                 "• Tamaño de cuadrícula: Dimensiones del espacio de simulación",
                 "• Pasos máximos: Límite de movimientos por partícula",
-                "• Probabilidad de adhesión: Chance de que una partícula se adhiera (%)",
+                "• Probabilidad de difusión: Chance de que una partícula se adhiera (%), o sea adhesión",
                 "• Dirección del viento: 0: Deshabilitado 1: Norte, 2: Sur, 3: Este, 4: Oeste",
                 "• Fuerza del viento: Intensidad del efecto del viento (%)",
                 "• Tipo de vecinos: 4 para von Neumann, 8 para Moore",
