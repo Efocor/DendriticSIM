@@ -390,7 +390,7 @@ def genera_informe_metricas(particle_positions, growth_times, distances, dim_fra
 #-------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------
 
-#simulación DLA
+#simulación DLA | esta es la principal
 def comienzasimu(config):
     """Configura e inicia la simulación DLA con coloreado por tiempo y análisis de datos."""
     grid_size = config["grid_size"]
@@ -558,6 +558,8 @@ def comienzasimu(config):
 #-------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------
+
+#proyecto 12.
 
 def simulacion_arbol(screen, input_values):
     """
@@ -794,7 +796,7 @@ def simulacion_probabilidades(screen, input_values): #esta funcion ocupa probabi
                               int(particle['y'] * pixel_size + pixel_size/2)),
                              max(1, pixel_size//2))
         
-        #UI
+        #ui
         boton_guarda.draw(simulation_screen)
         boton_back.draw(simulation_screen)
         
@@ -1046,7 +1048,7 @@ def welcomefe(screen, COLORS, FONTS):
         screen.blit(version_surf, version_rect)
         
         #muestra mensaje de continuar después de la animación inicial
-        if elapsed_time > 1500:
+        if elapsed_time > 1100:
             continue_surf = FONTS['text'].render("Presiona ESPACIO para continuar", 
                                            True, COLORS['text'])
             continue_rect = continue_surf.get_rect(center=(600, 500))
@@ -1194,7 +1196,7 @@ ties as in Project 4, Part b. After forming an aggregate with a specified number
 a specified number (such as 100) of particles; then change to a different stick
 ing probability configuration (Panoff 2004)."""
 
-#Debería hacer esta actividad 7:
+#Se hace la actividad 7:
 def simulacion_probabilidades3(screen, input_values):
     """
     Simulación DLA con probabilidades de adhesión variables
@@ -1220,7 +1222,7 @@ def simulacion_probabilidades3(screen, input_values):
     particle_positions.append((center, center))
     growth_times.append(0)
     
-    # Botones
+    #botones
     boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
     boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
@@ -1229,7 +1231,7 @@ def simulacion_probabilidades3(screen, input_values):
     running = True
     
     while running:
-        clock.tick(60)  # Control de FPS para animación fluida
+        clock.tick(60)  #control de FPS para animación fluida (60fps masterrace)
         simulation_screen.fill((30, 30, 40))
         
         for event in pygame.event.get():
@@ -1238,12 +1240,12 @@ def simulacion_probabilidades3(screen, input_values):
             if boton_back.eventoaccion(event):
                 running = False
 
-        # Generar nuevas partículas desde el borde
+        #genera nuevas partículas desde el borde
         if particles_added < NUM_PARTICLES and len(active_particles) < 50:
             active_particles.append({
                 'x': random.randint(0, GRID_SIZE-1),
                 'y': random.randint(0, GRID_SIZE-1),
-                'color': (255, 255, 255)  # Color blanco para partículas activas
+                'color': (255, 255, 255)  #color blanco para partículas activas, sino no se ven
             })
 
         #actualizar partículas activas
@@ -1303,18 +1305,18 @@ def simulacion_probabilidades3(screen, input_values):
                                    (j * pixel_size, i * pixel_size,
                                     pixel_size, pixel_size))
                     
-        # Dibujar partículas activas
+        #dibuja las partículas activas
         for particle in active_particles:
             pygame.draw.circle(simulation_screen, particle['color'],
                              (int(particle['x'] * pixel_size + pixel_size/2),
                               int(particle['y'] * pixel_size + pixel_size/2)),
                              max(1, pixel_size//2))
             
-        # UI
+        #UI
         boton_guarda.draw(simulation_screen)
         boton_back.draw(simulation_screen)
         
-        # Progreso
+        #progreso
         font = pygame.font.Font(None, 36)
         progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
         text_surf = font.render(progress_text, True, (255, 255, 255))
@@ -1338,7 +1340,7 @@ at a distance r > rmax + 4 from the seed, where rmax is the radius of the struct
 then have step sizes of length r – rmax – 2; otherwise, have step 
 sizes of length 1 (Gould and Tobochnik 1988)."""
 
-#HSe hace el Proyecto 11:
+#se hace el proyecto n° 11:
 def simulacion_circulo2(screen, input_values):
     """
     Simulación DLA con lanzamiento de partículas desde un círculo
@@ -1349,23 +1351,23 @@ def simulacion_circulo2(screen, input_values):
     MAX_STEPS = int(input_values["max_steps"])
     STICKING_PROB = float(input_values["sticking_prob"]) / 100
     
-    # Crear pantalla de simulación
+    #crear pantalla de simulación
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
     
-    # Inicialización
+    #inicialización
     grid = np.zeros((GRID_SIZE, GRID_SIZE))
     particle_positions = []
     growth_times = []
-    active_particles = []  # Lista para partículas en movimiento
+    active_particles = []  #lista para partículas en movimiento
     
-    # Crear semilla en el centro
+    #crear semilla en el centro
     center = GRID_SIZE // 2
     grid[center][center] = 1
     particle_positions.append((center, center))
     growth_times.append(0)
     
-    # Botones
+    #botoncitos
     boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
     boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
@@ -1618,7 +1620,7 @@ Aquí van funcions que realiza una vista distinta a partir de las simulaciones e
 config2 = {
     "num_particles": 3000,
     "grid_size": 150,
-    "experimento": "4a"  # Este es el parámetro que faltaba
+    "experimento": "4a"  #parametro de exp. puede ser del 3 al 6.
 }
 
 
@@ -1628,7 +1630,7 @@ def configavanzasim():
     win = pygame.display.set_mode((WIN_W, WIN_H))
     pygame.display.set_caption("DendriSIM | DLA Lab - Configuración")
     
-    # Colores
+    #colores
     BG = (30, 30, 40)
     TEXT = (220, 220, 220)
     BOX_BG = (45, 45, 55)
@@ -1708,14 +1710,14 @@ Produce patrones cristalinos direccionales""",
 Permite crecimiento en diagonales"""
     }
 
-    # Crear campos de entrada
+    #crea campos de entrada
     inputs = {
         'part': InputBox(150, 200, 250, 40, "Número de partículas", "2000"),
         'size': InputBox(150, 300, 250, 40, "Tamaño de cuadrícula", "150"),
         'exp': InputBox(150, 400, 250, 40, "Experimento (3-6)", "4a")
     }
     
-    # Crear botones
+    #crea los botones
     btn_start = Button(600, 600, 200, 50, "INICIAR")
     btn_back = Button(200, 600, 200, 50, "VOLVER")
     btn_info = Button(800, 50, 150, 40, "INFO")
@@ -1816,7 +1818,7 @@ def obtenerprobaadhe(grid, particle, contacts, experimento):
         if contacts <= 2: return 0.01
         elif contacts == 3: return 0.03
         else: return 1.0
-    elif experimento == "5":  # 4 vecinos
+    elif experimento == "5":  #4 vecinos
         base_prob = 0.1 * contacts
         for dx, dy in [(0,1), (1,0), (0,-1), (-1,0)]:
             if checklinearecta(grid, particle['x'], particle['y'], dx, dy):
@@ -1834,7 +1836,7 @@ def contarveci(grid, x, y, experimento):
     contacts = 0
     neighbors = [(0,1), (1,0), (0,-1), (-1,0)]
     
-    if experimento == "3":  # Para el experimento 3 usamos 4 vecinos
+    if experimento == "3":  #para el experimento 3 usamos 4 vecinos
         neighbors = [(0,1), (1,0), (0,-1), (-1,0)]
     elif experimento == "6":
         neighbors = [(0,1), (1,0), (0,-1), (-1,0), (1,1), (1,-1), (-1,1), (-1,-1)]
@@ -1850,9 +1852,9 @@ def contarveci(grid, x, y, experimento):
 def simulacionespecificaavanzada(config2):
     """Simulación DLA con diferentes probabilidades de adhesión"""
     SCREEN_SIZE = 800
-    GRID_SIZE = min(max(int(config2.get("grid_size", 150)), 100), 200)  # Valor por defecto 150
-    NUM_PARTICLES = min(max(int(config2.get("num_particles", 2000)), 500), 5000)  # Valor por defecto 2000
-    experimento = config2.get("experimento", "4a")  # Valor por defecto 4a
+    GRID_SIZE = min(max(int(config2.get("grid_size", 150)), 100), 200)  #valor por defecto 150
+    NUM_PARTICLES = min(max(int(config2.get("num_particles", 2000)), 500), 5000)  #valor por defecto 2000
+    experimento = config2.get("experimento", "4a")  #valor por defecto 4a, o sea si se inicia se corre el exp. 4a
    
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
@@ -2250,4 +2252,4 @@ def main():
 if __name__ == "__main__":
     main()
     
-#Copyright -> Felipe Alexander Correa Rodríguez
+#---- Copyright -> Felipe Alexander Correa Rodríguez ----
