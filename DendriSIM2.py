@@ -4,7 +4,6 @@
 # Objetivo: Implementar una simulación de DLA (agregación limitada por difusión).
 # Descripción: La idea es ver patrones de solidificación dendrítica en un sistema de partículas.
 # Lenguaje: Python
-# Autor: Felipe Alexander Correa Rodríguez
 #-------------------------------------------------------------------------------------------
 
 """
@@ -40,6 +39,13 @@ Controles:
 - Si cierra la pantalla de simulación, se devuelve a la pantalla de configuración.
 
 Nota: La simulación puede ser lenta con muchos parámetros o partículas, se recomienda ajustar los valores para obtener una simulación más rápida.
+
+----------------
+Luego tenemos las simulaciones default que sirven de muestra de ciertas situaciones interesantes o de estudio, y luego tenemos las simulaciones
+experimentales. Las últimas son casos para ver el comportamiento de las partículas que se plegan.
+
+Estos experimentos están basados en el siguiente libro: 
+Angela B. Shiflet, George W. Shiflet. Introduction to the Computational Science: Modeling and Simulation for Sciences.
 
 *El código está en mitad español y mitad inglés según fue cómodo al programar.
 
@@ -443,8 +449,9 @@ def comienzasimu(config):
                     growth_times.append(0)
 
     #botones
-    save_button = Button(10, 10, 120, 40, "Guardar", COLOR_BOTON, COLOR_BOTONHOVER)
-    stats_button = Button(140, 10, 120, 40, "Analizar", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_guarda = Button(10, 10, 120, 40, "Guardar", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_estadis = Button(140, 10, 120, 40, "Analizar", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_volver = Button(270, 10, 120, 40, "Volver", COLOR_BOTON, COLOR_BOTONHOVER)
     particles_added = len(particle_positions)
     running = True
 
@@ -457,11 +464,13 @@ def comienzasimu(config):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 filename = guardasimu(simulation_screen)
                 print(f"Simulación guardada como: {filename}")
-            if stats_button.eventoaccion(event):
+            if boton_estadis.eventoaccion(event):
                 genera_graficos_analisis(particle_positions, growth_times, grid_size)
+            if boton_volver.eventoaccion(event):
+                running = False
                 
         if particles_added < num_particles:
             for _ in range(min(5, num_particles - particles_added)):
@@ -535,8 +544,9 @@ def comienzasimu(config):
                     pygame.draw.rect(simulation_screen, (35, 35, 35),
                                    (j * pixel_size, i * pixel_size, pixel_size, pixel_size))
 
-        save_button.draw(simulation_screen)
-        stats_button.draw(simulation_screen)
+        boton_guarda.draw(simulation_screen)
+        boton_estadis.draw(simulation_screen)
+        boton_volver.draw(simulation_screen)
         progress = f"Progreso: {particles_added}/{num_particles} partículas"
         textosombra(simulation_screen, progress, (10, 60))
         
@@ -562,18 +572,18 @@ def simulacion_arbol(screen, input_values):
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
     
-    # Inicialización
+    #inicialización
     grid = np.zeros((GRID_SIZE, GRID_SIZE))
     particle_positions = []
     growth_times = []
-    active_particles = []  # Lista para partículas en movimiento
+    active_particles = []  #lista para partículas en movimiento
     
-    # Crear base del árbol en la parte inferior
-    base_y = GRID_SIZE - 1  # Parte inferior
+    #crear base del árbol en la parte inferior
+    base_y = GRID_SIZE - 1  #parte inferior
     center_x = GRID_SIZE // 2
     tree_width = GRID_SIZE // 6
     
-    # Crear base triangular
+    #crea base triangular
     for i in range(tree_width):
         for j in range(-i, i+1):
             x = center_x + j
@@ -583,44 +593,44 @@ def simulacion_arbol(screen, input_values):
                 particle_positions.append((y, x))
                 growth_times.append(0)
 
-    # Botones
-    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
-    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    #botones
+    boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
     particles_added = len(particle_positions)
     clock = pygame.time.Clock()
     running = True
     
     while running:
-        clock.tick(60)  # Control de FPS para animación fluida
+        clock.tick(60)  #control de FPS para animación fluida
         simulation_screen.fill((30, 30, 40))
         
         for event in pygame.event.get():
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 guardasimu(simulation_screen)
-            if back_button.eventoaccion(event):
+            if boton_back.eventoaccion(event):
                 running = False
 
-        # Generar nuevas partículas desde arriba
+        #generar nuevas partículas desde arriba
         if particles_added < NUM_PARTICLES and len(active_particles) < 50:
             active_particles.append({
                 'x': random.randint(0, GRID_SIZE-1),
                 'y': 0,
-                'color': (255, 255, 255)  # Color blanco para partículas activas
+                'color': (255, 255, 255)  #color blanco para partículas activas
             })
 
-        # Actualizar partículas activas
+        #actualizar partículas activas
         new_active_particles = []
         for particle in active_particles:
-            # Movimiento con sesgo hacia abajo
+            #movimiento con sesgo hacia abajo
             dx = random.choice([-1, 0, 1])
-            dy = random.randint(0, 2)  # Mayor probabilidad de ir hacia abajo
+            dy = random.randint(0, 2)  #mayor probabilidad de ir hacia abajo
             
             new_x = int(particle['x'] + dx)
             new_y = int(particle['y'] + dy)
             
             if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
-                # Verificar vecinos
+                #verificar vecinos
                 has_neighbor = False
                 for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
                     check_x, check_y = new_x + nx, new_y + ny
@@ -642,7 +652,7 @@ def simulacion_arbol(screen, input_values):
             
         active_particles = new_active_particles
 
-        # Dibujar estructura cristalina
+        #dibuja estructura cristalina
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 if grid[i][j] == 1:
@@ -650,18 +660,18 @@ def simulacion_arbol(screen, input_values):
                                    (j * pixel_size, i * pixel_size,
                                     pixel_size, pixel_size))
 
-        # Dibujar partículas activas
+        #dibujando partículas activas
         for particle in active_particles:
             pygame.draw.circle(simulation_screen, particle['color'],
                              (int(particle['x'] * pixel_size + pixel_size/2),
                               int(particle['y'] * pixel_size + pixel_size/2)),
                              max(1, pixel_size//2))
 
-        # UI
-        save_button.draw(simulation_screen)
-        back_button.draw(simulation_screen)
+        #UI
+        boton_guarda.draw(simulation_screen)
+        boton_back.draw(simulation_screen)
         
-        # Progreso
+        #progreso
         font = pygame.font.Font(None, 36)
         progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
         text_surf = font.render(progress_text, True, (255, 255, 255))
@@ -690,52 +700,52 @@ def simulacion_probabilidades(screen, input_values): #esta funcion ocupa probabi
     NUM_PARTICLES = int(input_values["num_particles"])
     MAX_STEPS = int(input_values["max_steps"])
     
-    # Crear pantalla de simulación
+    #crear pantalla de simulación
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
     
-    # Inicialización
+    #inicio esto
     grid = np.zeros((GRID_SIZE, GRID_SIZE))
     particle_positions = []
     growth_times = []
-    active_particles = []  # Lista para partículas en movimiento
+    active_particles = []  #lista para partículas en movimiento
     
-    # Crear semilla en el centro
+    #crea semilla en el centro
     center = GRID_SIZE // 2
     grid[center][center] = 1
     particle_positions.append((center, center))
     growth_times.append(0)
     
-    # Botones
-    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
-    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    #botones
+    boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
     particles_added = len(particle_positions)
     clock = pygame.time.Clock()
     running = True
     
     while running:
-        clock.tick(60)  # Control de FPS para animación fluida
+        clock.tick(60)  #control de FPS para animación fluida
         simulation_screen.fill((30, 30, 40))
         
         for event in pygame.event.get():
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 guardasimu(simulation_screen)
-            if back_button.eventoaccion(event):
+            if boton_back.eventoaccion(event):
                 running = False
 
-        # Generar nuevas partículas desde el borde
+        #genera nuevas partículas desde el borde
         if particles_added < NUM_PARTICLES and len(active_particles) < 50:
             active_particles.append({
                 'x': random.randint(0, GRID_SIZE-1),
                 'y': random.randint(0, GRID_SIZE-1),
-                'color': (255, 255, 255)  # Color blanco para partículas activas
+                'color': (255, 255, 255)  #color blanco para partículas activas
             })
 
-        # Actualizar partículas activas
+        #actualizar partículas activas
         new_active_particles = []
         for particle in active_particles:
-            # Movimiento aleatorio
+            #movimiento aleatorio
             dx = random.choice([-1, 0, 1])
             dy = random.choice([-1, 0,
                                 1])
@@ -745,7 +755,7 @@ def simulacion_probabilidades(screen, input_values): #esta funcion ocupa probabi
             new_y = int(particle['y'] + dy)
             
             if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
-                # Verificar vecinos
+                #verificar vecinos
                 has_neighbor = False
                 for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
                     check_x, check_y = new_x + nx, new_y + ny
@@ -755,7 +765,7 @@ def simulacion_probabilidades(screen, input_values): #esta funcion ocupa probabi
                         has_neighbor = True
                         break
                 
-                # Probabilidad de adhesión
+                #probabilidad de adhesión
                 sticking_prob = 0.33 if has_neighbor else 0.0
                 if random.random() < sticking_prob:
                     grid[new_y][new_x] = 1
@@ -769,7 +779,7 @@ def simulacion_probabilidades(screen, input_values): #esta funcion ocupa probabi
                     
         active_particles = new_active_particles
         
-        # Dibujar estructura cristalina
+        #dibujar estructura cristalina
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 if grid[i][j] == 1:
@@ -777,18 +787,18 @@ def simulacion_probabilidades(screen, input_values): #esta funcion ocupa probabi
                                    (j * pixel_size, i * pixel_size,
                                     pixel_size, pixel_size))
         
-        # Dibujar partículas activas
+        #dibujar partículas activas
         for particle in active_particles:
             pygame.draw.circle(simulation_screen, particle['color'],
                              (int(particle['x'] * pixel_size + pixel_size/2),
                               int(particle['y'] * pixel_size + pixel_size/2)),
                              max(1, pixel_size//2))
         
-        # UI
-        save_button.draw(simulation_screen)
-        back_button.draw(simulation_screen)
+        #UI
+        boton_guarda.draw(simulation_screen)
+        boton_back.draw(simulation_screen)
         
-        # Progreso
+        #progreson
         font = pygame.font.Font(None, 36)
         progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
         text_surf = font.render(progress_text, True, (255, 255, 255))
@@ -815,7 +825,8 @@ one or two particles, 0.03 for three particles, and 1.0 for more than three
 particles. Run the simulation a number of times and discuss the results 
 (Panoff 2004)."""
 
-#funciíon que cumple actividad 4a y 4b del proyecto 4
+#funciíon que cumple actividad 4a y 4b del proyecto 4:
+
 def simulacion_probabilidades2(screen, input_values):
     """
     Simulación DLA con probabilidades de adhesión variables
@@ -825,52 +836,52 @@ def simulacion_probabilidades2(screen, input_values):
     NUM_PARTICLES = int(input_values["num_particles"])
     MAX_STEPS = int(input_values["max_steps"])
     
-    # Crear pantalla de simulación
+    #crear pantalla de simulación
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
     
-    # Inicialización
+    #init
     grid = np.zeros((GRID_SIZE, GRID_SIZE))
     particle_positions = []
     growth_times = []
-    active_particles = []  # Lista para partículas en movimiento
+    active_particles = []  #lista para partículas en movimiento
     
-    # Crear semilla en el centro
+    #crear semilla en el centro
     center = GRID_SIZE // 2
     grid[center][center] = 1
     particle_positions.append((center, center))
     growth_times.append(0)
     
-    # Botones
-    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
-    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    #botones
+    boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
     particles_added = len(particle_positions)
     clock = pygame.time.Clock()
     running = True
     
     while running:
-        clock.tick(60)  # Control de FPS para animación fluida
+        clock.tick(60)  #control de FPS para animación fluida
         simulation_screen.fill((30, 30, 40))
         
         for event in pygame.event.get():
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 guardasimu(simulation_screen)
-            if back_button.eventoaccion(event):
+            if boton_back.eventoaccion(event):
                 running = False
 
-        # Generar nuevas partículas desde el borde
+        #generar nuevas partículas desde el borde
         if particles_added < NUM_PARTICLES and len(active_particles) < 50:
             active_particles.append({
                 'x': random.randint(0, GRID_SIZE-1),
                 'y': random.randint(0, GRID_SIZE-1),
-                'color': (255, 255, 255)  # Color blanco para partículas activas
+                'color': (255, 255, 255)  #color blanco para partículas activas (las que se mueven)
             })
 
-        # Actualizar partículas activas
+        #actualiza partículas activas
         new_active_particles = []
         for particle in active_particles:
-            # Movimiento aleatorio
+            #movimiento aleatorio
             dx = random.choice([-1, 0, 1])
             dy = random.choice([-1, 0,
                                 1])
@@ -879,7 +890,7 @@ def simulacion_probabilidades2(screen, input_values):
             new_y = int(particle['y'] + dy)
             
             if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
-                # Verificar vecinos
+                #verificar vecinos
                 num_neighbors = 0
                 for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
                     check_x, check_y = new_x + nx, new_y + ny
@@ -888,7 +899,7 @@ def simulacion_probabilidades2(screen, input_values):
                         grid[check_y][check_x] == 1):
                         num_neighbors += 1
                 
-                # Probabilidad de adhesión
+                #probabilidad de adhesión
                 if num_neighbors == 1:
                     sticking_prob = 0.1
                 elif num_neighbors == 2:
@@ -908,7 +919,7 @@ def simulacion_probabilidades2(screen, input_values):
                     
         active_particles = new_active_particles
         
-        # Dibujar estructura cristalina
+        #dibujar estructura cristalina
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 if grid[i][j] == 1:
@@ -916,18 +927,18 @@ def simulacion_probabilidades2(screen, input_values):
                                    (j * pixel_size, i * pixel_size,
                                     pixel_size, pixel_size))
 
-        # Dibujar partículas activas
+        #dibujar partículas activas
         for particle in active_particles:
             pygame.draw.circle(simulation_screen, particle['color'],
                              (int(particle['x'] * pixel_size + pixel_size/2),
                               int(particle['y'] * pixel_size + pixel_size/2)),
                              max(1, pixel_size//2))
             
-        # UI
-        save_button.draw(simulation_screen)
-        back_button.draw(simulation_screen)
+        #UI
+        boton_guarda.draw(simulation_screen)
+        boton_back.draw(simulation_screen)
         
-        # Progreso
+        #progresin
         font = pygame.font.Font(None, 36)
         progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
         text_surf = font.render(progress_text, True, (255, 255, 255))
@@ -1012,7 +1023,7 @@ def welcomefe(screen, COLORS, FONTS):
         title_surf = FONTS['title'].render("DendriSIM", True, COLORS['text'])
         subtitle_surf = FONTS['subtitle'].render("Simulador de Agregación Limitada por Difusión", 
                                                True, COLORS['accent'])
-        version_surf = FONTS['text'].render("v2.4", True, COLORS['text'])
+        version_surf = FONTS['text'].render("v2.6", True, COLORS['text'])
         
         #aplicar escala al logo
         scaled_title = pygame.transform.scale(title_surf, 
@@ -1047,15 +1058,12 @@ def welcomefe(screen, COLORS, FONTS):
 
 #-------------------------------------------------------------------------------------------
 """12. Repeat any of Projects 1, using a launching circle instead of a launching 
-rectangle, of radius 2rmax
- , where rmax
- is the radius of the structure so far. De
+rectangle, of radius 2rmax, where rmax is the radius of the structure so far. De
 lete a walker if it travels too close to the boundary of the grid or beyond a 
-distance of 3rmax
- from the seed. Such adjustments should speed the simula
+distance of 3rmax from the seed. Such adjustments should speed the simula
 tion (Gould and Tobochnik 1988)."""
 
-# La función debe cumplir el proyecto 12:
+#la función cumple el proyecto 12:
 def simulacion_circulo(screen, input_values):
     """
     Simulación DLA con lanzamiento de partículas desde un círculo
@@ -1066,41 +1074,41 @@ def simulacion_circulo(screen, input_values):
     MAX_STEPS = int(input_values["max_steps"])
     STICKING_PROB = float(input_values["sticking_prob"]) / 100
     
-    # Crear pantalla de simulación
+    #crear pantalla de simulación
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
     
-    # Inicialización
+    #inicialización
     grid = np.zeros((GRID_SIZE, GRID_SIZE))
     particle_positions = []
     growth_times = []
-    active_particles = []  # Lista para partículas en movimiento
+    active_particles = []  #lista para partículas en movimiento
     
-    # Crear semilla en el centro
+    #crear semilla en el centro
     center = GRID_SIZE // 2
     grid[center][center] = 1
     particle_positions.append((center, center))
     growth_times.append(0)
     
-    # Botones
-    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
-    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    #buotones
+    boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
     particles_added = len(particle_positions)
     clock = pygame.time.Clock()
     running = True
     
     while running:
-        clock.tick(60)  # Control de FPS para animación fluida
+        clock.tick(60)  #control de FPS para animación fluida
         simulation_screen.fill((30, 30, 40))
         
         for event in pygame.event.get():
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 guardasimu(simulation_screen)
-            if back_button.eventoaccion(event):
+            if boton_back.eventoaccion(event):
                 running = False
 
-        # Generar nuevas partículas desde el borde
+        #generar nuevas partículas desde el borde
         if particles_added < NUM_PARTICLES and len(active_particles) < 50:
             angle = random.uniform(0, 2 * math.pi)
             radius = GRID_SIZE // 2
@@ -1110,13 +1118,13 @@ def simulacion_circulo(screen, input_values):
             active_particles.append({
                 'x': x,
                 'y': y,
-                'color': (255, 255, 255)  # Color blanco para partículas activas
+                'color': (255, 255, 255)  #color blanco para partículas activas
             })
             
-        # Actualizar partículas activas
+        #actualizar partículas activas
         new_active_particles = []
         for particle in active_particles:
-            # Movimiento aleatorio
+            #movimiento aleatorio
             dx = random.choice([-1, 0, 1])
             dy = random.choice([-1, 0, 1])
             
@@ -1124,7 +1132,7 @@ def simulacion_circulo(screen, input_values):
             new_y = int(particle['y'] + dy)
             
             if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
-                # Verificar vecinos
+                #verificar vecinos
                 has_neighbor = False
                 for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
                     check_x, check_y = new_x + nx, new_y + ny
@@ -1146,7 +1154,7 @@ def simulacion_circulo(screen, input_values):
                     
         active_particles = new_active_particles
         
-        # Dibujar estructura cristalina
+        #dibuja estructura cristalina
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 if grid[i][j] == 1:
@@ -1154,18 +1162,18 @@ def simulacion_circulo(screen, input_values):
                                    (j * pixel_size, i * pixel_size,
                                     pixel_size, pixel_size))
                     
-        # Dibujar partículas activas
+        #dibuja partículas activas
         for particle in active_particles:
             pygame.draw.circle(simulation_screen, particle['color'],
                              (int(particle['x'] * pixel_size + pixel_size/2),
                               int(particle['y'] * pixel_size + pixel_size/2)),
                              max(1, pixel_size//2))
             
-        # UI
-        save_button.draw(simulation_screen)
-        back_button.draw(simulation_screen)
+        #UI
+        boton_guarda.draw(simulation_screen)
+        boton_back.draw(simulation_screen)
         
-        # Progreso
+        #progreso
         font = pygame.font.Font(None, 36)
         progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
         text_surf = font.render(progress_text, True, (255, 255, 255))
@@ -1196,25 +1204,25 @@ def simulacion_probabilidades3(screen, input_values):
     NUM_PARTICLES = int(input_values["num_particles"])
     MAX_STEPS = int(input_values["max_steps"])
     
-    # Crear pantalla de simulación
+    #crear pantalla de simulación
     simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pixel_size = SCREEN_SIZE // GRID_SIZE
     
-    # Inicialización
+    #inicialización
     grid = np.zeros((GRID_SIZE, GRID_SIZE))
     particle_positions = []
     growth_times = []
-    active_particles = []  # Lista para partículas en movimiento
+    active_particles = []  #lista para partículas en movimiento
     
-    # Crear semilla en el centro
+    #crear semilla en el centro
     center = GRID_SIZE // 2
     grid[center][center] = 1
     particle_positions.append((center, center))
     growth_times.append(0)
     
     # Botones
-    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
-    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
     particles_added = len(particle_positions)
     clock = pygame.time.Clock()
@@ -1225,9 +1233,9 @@ def simulacion_probabilidades3(screen, input_values):
         simulation_screen.fill((30, 30, 40))
         
         for event in pygame.event.get():
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 guardasimu(simulation_screen)
-            if back_button.eventoaccion(event):
+            if boton_back.eventoaccion(event):
                 running = False
 
         # Generar nuevas partículas desde el borde
@@ -1238,10 +1246,10 @@ def simulacion_probabilidades3(screen, input_values):
                 'color': (255, 255, 255)  # Color blanco para partículas activas
             })
 
-        # Actualizar partículas activas
+        #actualizar partículas activas
         new_active_particles = []
         for particle in active_particles:
-            # Movimiento aleatorio
+            #movimiento aleatorio
             dx = random.choice([-1, 0, 1])
             dy = random.choice([-1, 0,
                                 1])
@@ -1250,7 +1258,7 @@ def simulacion_probabilidades3(screen, input_values):
             new_y = int(particle['y'] + dy)
             
             if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
-                # Verificar vecinos
+                #verifica vecinos
                 num_neighbors = 0
                 for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
                     check_x, check_y = new_x + nx, new_y + ny
@@ -1287,7 +1295,7 @@ def simulacion_probabilidades3(screen, input_values):
                     
         active_particles = new_active_particles
         
-        # Dibujar estructura cristalina
+        #dibuja estructura cristalina
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 if grid[i][j] == 1:
@@ -1303,8 +1311,8 @@ def simulacion_probabilidades3(screen, input_values):
                              max(1, pixel_size//2))
             
         # UI
-        save_button.draw(simulation_screen)
-        back_button.draw(simulation_screen)
+        boton_guarda.draw(simulation_screen)
+        boton_back.draw(simulation_screen)
         
         # Progreso
         font = pygame.font.Font(None, 36)
@@ -1330,7 +1338,7 @@ at a distance r > rmax + 4 from the seed, where rmax is the radius of the struct
 then have step sizes of length r – rmax – 2; otherwise, have step 
 sizes of length 1 (Gould and Tobochnik 1988)."""
 
-#Haz el Proyecto 11:
+#HSe hace el Proyecto 11:
 def simulacion_circulo2(screen, input_values):
     """
     Simulación DLA con lanzamiento de partículas desde un círculo
@@ -1358,8 +1366,8 @@ def simulacion_circulo2(screen, input_values):
     growth_times.append(0)
     
     # Botones
-    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
-    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
     particles_added = len(particle_positions)
     clock = pygame.time.Clock()
@@ -1370,9 +1378,9 @@ def simulacion_circulo2(screen, input_values):
         simulation_screen.fill((30, 30, 40))
         
         for event in pygame.event.get():
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 guardasimu(simulation_screen)
-            if back_button.eventoaccion(event):
+            if boton_back.eventoaccion(event):
                 running = False
 
         # Generar nuevas partículas desde el borde
@@ -1437,8 +1445,8 @@ def simulacion_circulo2(screen, input_values):
                              max(1, pixel_size//2))
             
         # UI
-        save_button.draw(simulation_screen)
-        back_button.draw(simulation_screen)
+        boton_guarda.draw(simulation_screen)
+        boton_back.draw(simulation_screen)
         
         # Progreso
         font = pygame.font.Font(None, 36)
@@ -1485,8 +1493,8 @@ def simulacion_flor(screen, input_values):
                 growth_times.append(0)
     
     #botones
-    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
-    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_guarda = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    boton_back = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
     
     particles_added = len(particle_positions)
     clock = pygame.time.Clock()
@@ -1503,9 +1511,9 @@ def simulacion_flor(screen, input_values):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if save_button.eventoaccion(event):
+            if boton_guarda.eventoaccion(event):
                 guardasimu(simulation_screen)
-            if back_button.eventoaccion(event):
+            if boton_back.eventoaccion(event):
                 running = False
         
         #generar múltiples partículas por frame
@@ -1588,8 +1596,8 @@ def simulacion_flor(screen, input_values):
                              max(2, pixel_size//2))
         
         #UI
-        save_button.draw(simulation_screen)
-        back_button.draw(simulation_screen)
+        boton_guarda.draw(simulation_screen)
+        boton_back.draw(simulation_screen)
         
         #progreso
         font = pygame.font.Font(None, 36)
@@ -1601,6 +1609,351 @@ def simulacion_flor(screen, input_values):
     
     pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
     return particle_positions, growth_times
+
+#-------------------------------------------------------------------------------------------
+"""
+Aquí van funcions que realiza una vista distinta a partir de las simulaciones especiales
+"""
+
+config2 = {
+    "num_particles": 3000,
+    "grid_size": 150,
+    "experimento": "4a"  # Este es el parámetro que faltaba
+}
+
+
+def configavanzasim():
+    """Ventana de configuración para experimentos DLA avanzados"""
+    WIN_W, WIN_H = 1000, 700
+    win = pygame.display.set_mode((WIN_W, WIN_H))
+    pygame.display.set_caption("DendriSIM | DLA Lab - Configuración")
+    
+    # Colores
+    BG = (30, 30, 40)
+    TEXT = (220, 220, 220)
+    BOX_BG = (45, 45, 55)
+    BOX_ACTIVE = (55, 55, 65)
+    HIGHLIGHT = (70, 130, 180)
+    
+    class InputBox:
+        def __init__(self, x, y, w, h, text='', default=''):
+            self.rect = pygame.Rect(x, y, w, h)
+            self.color = BOX_BG
+            self.text = text
+            self.value = default
+            self.active = False
+            
+        def handle_event(self, event):
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.active = self.rect.collidepoint(event.pos)
+                self.color = BOX_ACTIVE if self.active else BOX_BG
+            if event.type == pygame.KEYDOWN and self.active:
+                if event.key == pygame.K_BACKSPACE:
+                    self.value = self.value[:-1]
+                else:
+                    self.value += event.unicode
+                    
+        def draw(self, surface):
+            #dibuja la caja
+            pygame.draw.rect(surface, self.color, self.rect)
+            pygame.draw.rect(surface, HIGHLIGHT, self.rect, 2)
+            
+            #dibujar texto label
+            label = FONT.render(self.text, True, TEXT)
+            surface.blit(label, (self.rect.x, self.rect.y - 25))
+            
+            #dibuja el valor, o sea lo coloca
+            txt_surface = FONT.render(self.value, True, TEXT)
+            surface.blit(txt_surface, (self.rect.x + 5, self.rect.y + 5))
+
+    class Button:
+        def __init__(self, x, y, w, h, text):
+            self.rect = pygame.Rect(x, y, w, h)
+            self.text = text
+            self.color = BOX_BG
+            self.hover = False
+            
+        def update(self, pos):
+            self.hover = self.rect.collidepoint(pos)
+            self.color = BOX_ACTIVE if self.hover else BOX_BG
+            
+        def draw(self, surface):
+            pygame.draw.rect(surface, self.color, self.rect)
+            pygame.draw.rect(surface, HIGHLIGHT, self.rect, 2)
+            txt = FONT.render(self.text, True, TEXT)
+            txt_rect = txt.get_rect(center=self.rect.center)
+            surface.blit(txt, txt_rect)
+
+    experimentos = {
+        "3": "Prob: 0.33(1p), 0.67(2p), 1.0(3+p)",
+        "4a": "Probabilidad proporcional al número de contactos",
+        "4b": "Prob: 0.1(1p), 0.5(2p), 0.9(3+p)",
+        "4c": "Prob: 0.01(1-2p), 0.03(3p), 1.0(4+p)",
+        "5": "Enlaces en línea recta (4 vecinos)",
+        "6": "Enlaces en línea recta (8 vecinos)"
+    }
+    
+    info = {
+        "3": """1 contacto: 33% | 2 contactos: 67% | 3+ contactos: 100%
+Basado en Panoff 2004 - Crecimiento controlado""",
+        "4a": """Probabilidad = 0.2 × número de contactos (máx 0.8)
+Simula crecimiento natural con adherencia gradual""",
+        "4b": """1 contacto: 10% | 2 contactos: 50% | 3+ contactos: 90%
+Favorece ramificaciones moderadas""",
+        "4c": """1-2 contactos: 1% | 3 contactos: 3% | 4+ contactos: 100%
+Genera estructuras más densas y compactas""",
+        "5": """Adherencia preferente en línea recta (4 direcciones)
+Produce patrones cristalinos direccionales""",
+        "6": """Similar a exp.5 pero con 8 direcciones
+Permite crecimiento en diagonales"""
+    }
+
+    # Crear campos de entrada
+    inputs = {
+        'part': InputBox(150, 200, 250, 40, "Número de partículas", "2000"),
+        'size': InputBox(150, 300, 250, 40, "Tamaño de cuadrícula", "150"),
+        'exp': InputBox(150, 400, 250, 40, "Experimento (3-6)", "4a")
+    }
+    
+    # Crear botones
+    btn_start = Button(600, 600, 200, 50, "INICIAR")
+    btn_back = Button(200, 600, 200, 50, "VOLVER")
+    btn_info = Button(800, 50, 150, 40, "INFO")
+    
+    FONT_NORMAL = pygame.font.Font(None, 28)
+    FONT_SMALL = pygame.font.Font(None, 20)
+    show_info = False
+    running = True
+    
+    while running:
+        mouse_pos = pygame.mouse.get_pos()
+        win.fill(BG)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.display.set_mode((1200, 800))
+                return None
+                
+            for input_box in inputs.values():
+                input_box.handle_event(event)
+                
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if btn_start.rect.collidepoint(event.pos):
+                    return {k: box.value for k, box in inputs.items()}
+                if btn_back.rect.collidepoint(event.pos):
+                    pygame.display.set_mode((1200, 800))
+                    return None
+                if btn_info.rect.collidepoint(event.pos):
+                    show_info = not show_info
+        
+        #actualiza botones
+        btn_start.update(mouse_pos)
+        btn_back.update(mouse_pos)
+        btn_info.update(mouse_pos)
+        
+        #dibujar título
+        title = FUENTE_TITULO.render("Configuración DLA", True, TEXT)
+        win.blit(title, (WIN_W//2 - title.get_width()//2, 50))
+        
+        #dibuja campos de entrada
+        for input_box in inputs.values():
+            input_box.draw(win)
+        
+        #te muestra descripción del experimento actual
+        exp_val = inputs['exp'].value
+        if exp_val in experimentos:
+            desc = FONT.render(experimentos[exp_val], True, TEXT)
+            win.blit(desc, (150, 480))
+        
+        #dibujar botones
+        btn_start.draw(win)
+        btn_back.draw(win)
+        btn_info.draw(win)
+        
+        #muestra ventana de información
+        if show_info:
+            info_surf = pygame.Surface((700, 500))
+            info_surf.fill(BOX_BG)
+            pygame.draw.rect(info_surf, HIGHLIGHT, (0, 0, 700, 500), 2)
+            
+            y = 25
+            for exp_id, exp_info in info.items():
+                title = FONT_NORMAL.render(f"Experimento {exp_id}", True, HIGHLIGHT)
+                info_surf.blit(title, (20, y))
+                y += 22
+                
+                for line in exp_info.split('\n'):
+                    text = FONT_SMALL.render(line, True, TEXT)
+                    info_surf.blit(text, (40, y))
+                    y += 22
+                y += 10
+            
+            win.blit(info_surf, (150, 100))
+        
+        pygame.display.flip()
+    
+    return None
+
+def checklinearecta(grid, x, y, dx, dy):
+    """Verifica si hay una línea recta en la dirección dada"""
+    if 0 <= x + 2*dx < len(grid) and 0 <= y + 2*dy < len(grid):
+        return grid[x + dx, y + dy] == 1 and grid[x + 2*dx, y + 2*dy] == 1
+    return False
+
+def obtenerprobaadhe(grid, particle, contacts, experimento):
+    if experimento == "3":  #comenzamos desde el 3, 1 y 2 se pueden hacer en el simulador normal.
+        if contacts == 1: return 0.33
+        elif contacts == 2: return 0.67
+        elif contacts >= 3: return 1.0
+        return 0.0
+    elif experimento == "4a":
+        return min(0.2 * contacts, 0.8)
+    elif experimento == "4b":
+        if contacts == 1: return 0.1
+        elif contacts == 2: return 0.5
+        else: return 0.9
+    elif experimento == "4c":
+        if contacts <= 2: return 0.01
+        elif contacts == 3: return 0.03
+        else: return 1.0
+    elif experimento == "5":  # 4 vecinos
+        base_prob = 0.1 * contacts
+        for dx, dy in [(0,1), (1,0), (0,-1), (-1,0)]:
+            if checklinearecta(grid, particle['x'], particle['y'], dx, dy):
+                return min(base_prob * 2, 0.9)
+        return base_prob
+    else:  #experimento 6 (8 vecinos)
+        base_prob = 0.1 * contacts
+        for dx, dy in [(0,1), (1,0), (0,-1), (-1,0), (1,1), (1,-1), (-1,1), (-1,-1)]:
+            if checklinearecta(grid, particle['x'], particle['y'], dx, dy):
+                return min(base_prob * 2, 0.9)
+        return base_prob
+
+def contarveci(grid, x, y, experimento):
+    """Cuenta los vecinos según el experimento"""
+    contacts = 0
+    neighbors = [(0,1), (1,0), (0,-1), (-1,0)]
+    
+    if experimento == "3":  # Para el experimento 3 usamos 4 vecinos
+        neighbors = [(0,1), (1,0), (0,-1), (-1,0)]
+    elif experimento == "6":
+        neighbors = [(0,1), (1,0), (0,-1), (-1,0), (1,1), (1,-1), (-1,1), (-1,-1)]
+    else:
+        neighbors = [(0,1), (1,0), (0,-1), (-1,0)]
+    
+    for dx, dy in neighbors:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < len(grid) and 0 <= ny < len(grid) and grid[nx, ny] == 1:
+            contacts += 1
+    return contacts
+
+def simulacionespecificaavanzada(config2):
+    """Simulación DLA con diferentes probabilidades de adhesión"""
+    SCREEN_SIZE = 800
+    GRID_SIZE = min(max(int(config2.get("grid_size", 150)), 100), 200)  # Valor por defecto 150
+    NUM_PARTICLES = min(max(int(config2.get("num_particles", 2000)), 500), 5000)  # Valor por defecto 2000
+    experimento = config2.get("experimento", "4a")  # Valor por defecto 4a
+   
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+   
+    #inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    center = GRID_SIZE // 2
+    grid[center, center] = 1  #semilla central, la de siempre.
+   
+    particles_added = 1
+    running = True
+    boton_volver = Button(20, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+   
+    #lista para partículas activas
+    active_particles = []
+   
+    while running and particles_added < NUM_PARTICLES:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.display.set_mode((1200, 800))  #cambio aquí
+                running = False
+            if boton_volver.eventoaccion(event):
+                pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+                return grid
+       
+        #generar nuevas partículas
+        if len(active_particles) < 50:
+            angle = random.uniform(0, 2 * np.pi)
+            radius = GRID_SIZE // 4
+            x = int(center + radius * np.cos(angle))
+            y = int(center + radius * np.sin(angle))
+            if 0 <= x < GRID_SIZE and 0 <= y < GRID_SIZE and grid[x, y] == 0:
+                active_particles.append({'x': x, 'y': y})
+       
+        #actualizo partículas activas
+        new_active_particles = []
+        for particle in active_particles:
+            #contar contactos según el experimento
+            contacts = contarveci(grid, particle['x'], particle['y'], experimento)
+           
+            if contacts > 0:
+                prob = obtenerprobaadhe(grid, particle, contacts, experimento)
+                if random.random() < prob:
+                    grid[particle['x'], particle['y']] = 1
+                    particles_added += 1
+                    continue
+           
+            #movimiento aleatorio (adaptado para 8 direcciones en exp 6)
+            if experimento == "6":
+                dx = random.choice([-1, 0, 1])
+                dy = random.choice([-1, 0, 1])
+            else:
+                dx = random.choice([-1, 0, 1])
+                dy = random.choice([-1, 0, 1])
+                if dx != 0 and dy != 0:  #evita movimientos diagonales en otros experimentos
+                    if random.random() < 0.5:
+                        dx = 0
+                    else:
+                        dy = 0
+            
+            new_x = particle['x'] + dx
+            new_y = particle['y'] + dy
+           
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                particle['x'] = new_x
+                particle['y'] = new_y
+                new_active_particles.append(particle)
+       
+        active_particles = new_active_particles
+       
+        #dibujar
+        simulation_screen.fill((30, 30, 40))
+       
+        #dibujar estructura cristalina
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i, j] == 1:
+                    distance = np.sqrt((i-center)**2 + (j-center)**2)
+                    color = gradientecolores(distance, GRID_SIZE/4)
+                    pygame.draw.rect(simulation_screen, color,
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+       
+        #dibujar partículas activas
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, (255, 255, 255),
+                             (int(particle['y'] * pixel_size + pixel_size/2),
+                              int(particle['x'] * pixel_size + pixel_size/2)),
+                             max(1, pixel_size//2))
+       
+        #UI
+        boton_volver.draw(simulation_screen)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = FONT.render(progress_text, True, COLOR_TEXTO)
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+       
+        pygame.display.flip()
+        pygame.time.wait(10)
+   
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    return grid
 
 #-------------------------------------------------------------------------------------------
 #lógica del programa
@@ -1677,22 +2030,24 @@ def main():
     #crear botones
     boton_start = ModernButton(900, 700, 250, 50, "INICIAR SIMULACIÓN", 
                                COLORS['button'], COLORS['button_hover'])
+    boton_simavan = ModernButton(450, 700, 250, 50, "SIMULACIÓN ESPECÍFICA",
+                                    COLORS['button'], COLORS['button_hover'])
     boton_ayuda = ModernButton(50, 700, 250, 50, "AYUDA", 
                               COLORS['panel'], COLORS['input_active'])
     #se agrega:
-    tree_button = ModernButton(450, 400, 250, 50, "SIMULACION ESP. ARBOL", 
+    tree_button = ModernButton(450, 400, 250, 50, "Simulación de Árbol", 
                                  COLORS['button'], COLORS['button_hover'])
-    probabilities_button = ModernButton(450, 460, 250, 50, "SIMULACION ESP. PROBA1", 
+    probabilities_button = ModernButton(450, 460, 250, 50, "Simulación Mov. Partículas", 
                                  COLORS['button'], COLORS['button_hover'])
-    probabilidades2_button = ModernButton(450, 520, 250, 50, "SIMULACION ESP. PROBA2", 
+    probabilidades2_button = ModernButton(450, 520, 250, 50, "Tipo 4 - Adherencia Baja", 
                                  COLORS['button'], COLORS['button_hover'])
-    boton_circulo = ModernButton(450, 580, 250, 50, "SIMULACION ESP. CIRCULO", 
+    boton_circulo = ModernButton(800, 400, 250, 50, "Simulación Grid Circle", 
                                  COLORS['button'], COLORS['button_hover'])
-    probabilidades3_button = ModernButton(800, 400, 250, 50, "SIMULACION ESP. PROBA3", 
+    probabilidades3_button = ModernButton(450, 580, 250, 50, "Tipo 8 - Adherencia Baja", 
                                  COLORS['button'], COLORS['button_hover'])
-    boton_circulo2 = ModernButton(800, 460, 250, 50, "SIMULACION ESP. CIRCULO2",
+    boton_circulo2 = ModernButton(800, 460, 250, 50, "Simulación Grid Circle 2",
                                     COLORS['button'], COLORS['button_hover'])
-    boton_flor = ModernButton(800, 520, 250, 50, "SIMULACION ESP. FLOR",
+    boton_flor = ModernButton(800, 520, 250, 50, "Centro Circular Rápido",
                                     COLORS['button'], COLORS['button_hover'])
 
     #variables de estado
@@ -1780,13 +2135,14 @@ def main():
         probabilidades3_button.draw(screen)
         boton_circulo2.draw(screen)
         boton_flor.draw(screen)
+        boton_simavan.draw(screen)
 
         #panel de ayuda
         if help_visible:
             help_panel = pygame.Rect(200, 150, 800, 500)
             panelesprint(help_panel, COLORS['panel2'])
             
-            help_title = FONTS['subtitle'].render("Guía de Configuración", True, COLORS['accent'])
+            help_title = FONTS['subtitle'].render("Guía de Configuración y Ayuda", True, COLORS['accent'])
             screen.blit(help_title, (help_panel.centerx - help_title.get_width()//2, 170))
 
             help_texts = [
@@ -1802,6 +2158,8 @@ def main():
                 "• Forma de la semilla: 1 para normal, 2 para triangular, 3 para circular",
                 "",
                 "Los valores fuera de rango se ajustarán automáticamente.",
+                "*Se agregan simulaciones especiales de referencia, sus valores no son editables",
+                "*El botón de simulación específica permite ver un set de experimentos sobre DLAs",
             ]
 
             for i, text in enumerate(help_texts):
@@ -1879,6 +2237,10 @@ def main():
             if boton_flor.eventoaccion(event):
                 valores = {key: field["value"] for key, field in input_fields.items()}
                 simulacion_flor(screen, valores)
+            if boton_simavan.eventoaccion(event):
+                config2 = configavanzasim()
+                if config2:
+                    simulacionespecificaavanzada(config2)
 
         pygame.display.flip()
         clock.tick(60)
@@ -1887,3 +2249,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+#Copyright -> Felipe Alexander Correa Rodríguez
