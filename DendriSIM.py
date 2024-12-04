@@ -5,6 +5,7 @@
 # Descripción: La idea es ver patrones de solidificación dendrítica en un sistema de partículas.
 # Lenguaje: Python
 # Autor: Felipe Alexander Correa Rodríguez (Chile)
+# Versión: 1.0 (Versión 25/11/2024)
 #-------------------------------------------------------------------------------------------
 
 """
@@ -571,7 +572,7 @@ def main():
         
     #bucle principal
     while running:
-        # Dibujar fondo
+        #dibujar fondo
         backgroundengradiente()
 
         #título y subtítulo
