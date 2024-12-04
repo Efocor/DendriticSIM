@@ -4,7 +4,7 @@
 # Objetivo: Implementar una simulación de DLA (agregación limitada por difusión).
 # Descripción: La idea es ver patrones de solidificación dendrítica en un sistema de partículas.
 # Lenguaje: Python
-# Autor: Felipe Alexander Correa Roríguez
+# Autor: Felipe Alexander Correa Rodríguez
 #-------------------------------------------------------------------------------------------
 
 """
@@ -1012,7 +1012,7 @@ def welcomefe(screen, COLORS, FONTS):
         title_surf = FONTS['title'].render("DendriSIM", True, COLORS['text'])
         subtitle_surf = FONTS['subtitle'].render("Simulador de Agregación Limitada por Difusión", 
                                                True, COLORS['accent'])
-        version_surf = FONTS['text'].render("v2.3", True, COLORS['text'])
+        version_surf = FONTS['text'].render("v2.4", True, COLORS['text'])
         
         #aplicar escala al logo
         scaled_title = pygame.transform.scale(title_surf, 
@@ -1453,6 +1453,156 @@ def simulacion_circulo2(screen, input_values):
     return particle_positions, growth_times
 
 #-------------------------------------------------------------------------------------------
+#Versión de simulación con características smoothed y tal que se forme como una flor dendrítica
+
+def simulacion_flor(screen, input_values):
+    """
+    Simulación DLA con lanzamiento de partículas desde un círculo para formar una flor
+    """
+    SCREEN_SIZE = 800
+    GRID_SIZE = int(input_values["grid_size"])
+    NUM_PARTICLES = int(input_values["num_particles"])
+    MAX_STEPS = int(input_values["max_steps"])
+    STICKING_PROB = float(input_values["sticking_prob"]) / 100
+    
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+    
+    #inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    particle_positions = []
+    growth_times = []
+    active_particles = []
+    
+    #crear semilla en forma de pequeño círculo en el centro
+    center = GRID_SIZE // 2
+    seed_radius = 2
+    for i in range(-seed_radius, seed_radius + 1):
+        for j in range(-seed_radius, seed_radius + 1):
+            if i*i + j*j <= seed_radius*seed_radius:
+                grid[center + i][center + j] = 1
+                particle_positions.append((center + i, center + j))
+                growth_times.append(0)
+    
+    #botones
+    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    
+    particles_added = len(particle_positions)
+    clock = pygame.time.Clock()
+    running = True
+    
+    #optimizaciones para mayor velocidad
+    MAX_ACTIVE_PARTICLES = 200  #aumentado para más partículas simultáneas
+    SPAWN_RATE = 10  #partículas generadas por frame
+    
+    while running and particles_added < NUM_PARTICLES:
+        clock.tick(120)  #aumentado para mayor velocidad
+        simulation_screen.fill((30, 30, 40))
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if save_button.eventoaccion(event):
+                guardasimu(simulation_screen)
+            if back_button.eventoaccion(event):
+                running = False
+        
+        #generar múltiples partículas por frame
+        if len(active_particles) < MAX_ACTIVE_PARTICLES:
+            for _ in range(SPAWN_RATE):
+                angle = random.uniform(0, 2 * math.pi)
+                radius = GRID_SIZE // 3  #radio reducido para movimiento más rápido
+                x = int(center + radius * math.cos(angle))
+                y = int(center + radius * math.sin(angle))
+                
+                #dirección inicial hacia el centro
+                dx = center - x
+                dy = center - y
+                mag = math.sqrt(dx*dx + dy*dy)
+                if mag > 0:
+                    dx, dy = dx/mag, dy/mag
+                
+                active_particles.append({
+                    'x': x,
+                    'y': y,
+                    'dx': dx,
+                    'dy': dy,
+                    'color': (255, 255, 255)
+                })
+        
+        #actualizar partículas con movimiento mejorado
+        new_active_particles = []
+        for particle in active_particles:
+            #movimiento dirigido hacia el centro con componente aleatorio
+            noise = 0.3
+            dx = particle['dx'] + random.uniform(-noise, noise)
+            dy = particle['dy'] + random.uniform(-noise, noise)
+            
+            new_x = int(particle['x'] + dx * 2)  #velocidad aumentada
+            new_y = int(particle['y'] + dy * 2)
+            
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                #verificar vecinos con radio aumentado
+                has_neighbor = False
+                for nx in range(-1, 2):
+                    for ny in range(-1, 2):
+                        check_x, check_y = new_x + nx, new_y + ny
+                        if (0 <= check_x < GRID_SIZE and 
+                            0 <= check_y < GRID_SIZE and 
+                            grid[check_y][check_x] == 1):
+                            has_neighbor = True
+                            break
+                    if has_neighbor:
+                        break
+                
+                if has_neighbor and random.random() < STICKING_PROB:
+                    grid[new_y][new_x] = 1
+                    particle_positions.append((new_y, new_x))
+                    growth_times.append(pygame.time.get_ticks())
+                    particles_added += 1
+                else:
+                    particle['x'] = new_x
+                    particle['y'] = new_y
+                    particle['dx'] = dx
+                    particle['dy'] = dy
+                    new_active_particles.append(particle)
+        
+        active_particles = new_active_particles
+        
+        #dibujar con efecto de suavizado
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i][j] == 1:
+                    #color más suave para mejor apariencia
+                    color = (180, 200, 255)
+                    pygame.draw.rect(simulation_screen, color,
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+        
+        #dibuja partículas activas con efecto de brillo
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, particle['color'],
+                             (int(particle['x'] * pixel_size + pixel_size/2),
+                              int(particle['y'] * pixel_size + pixel_size/2)),
+                             max(2, pixel_size//2))
+        
+        #UI
+        save_button.draw(simulation_screen)
+        back_button.draw(simulation_screen)
+        
+        #progreso
+        font = pygame.font.Font(None, 36)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = font.render(progress_text, True, (255, 255, 255))
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+        
+        pygame.display.flip()
+    
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    return particle_positions, growth_times
+
+#-------------------------------------------------------------------------------------------
 #lógica del programa
 #-------------------------------------------------------------------------------------------
 
@@ -1542,6 +1692,8 @@ def main():
                                  COLORS['button'], COLORS['button_hover'])
     boton_circulo2 = ModernButton(800, 460, 250, 50, "SIMULACION ESP. CIRCULO2",
                                     COLORS['button'], COLORS['button_hover'])
+    boton_flor = ModernButton(800, 520, 250, 50, "SIMULACION ESP. FLOR",
+                                    COLORS['button'], COLORS['button_hover'])
 
     #variables de estado
     running = True
@@ -1627,6 +1779,7 @@ def main():
         boton_circulo.draw(screen)
         probabilidades3_button.draw(screen)
         boton_circulo2.draw(screen)
+        boton_flor.draw(screen)
 
         #panel de ayuda
         if help_visible:
@@ -1722,6 +1875,10 @@ def main():
             if boton_circulo2.eventoaccion(event):
                 valores = {key: field["value"] for key, field in input_fields.items()}
                 simulacion_circulo2(screen, valores)
+                
+            if boton_flor.eventoaccion(event):
+                valores = {key: field["value"] for key, field in input_fields.items()}
+                simulacion_flor(screen, valores)
 
         pygame.display.flip()
         clock.tick(60)
