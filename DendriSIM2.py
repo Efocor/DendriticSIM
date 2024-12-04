@@ -4,13 +4,13 @@
 # Objetivo: Implementar una simulación de DLA (agregación limitada por difusión).
 # Descripción: La idea es ver patrones de solidificación dendrítica en un sistema de partículas.
 # Lenguaje: Python
-# Autor : Felipe Alexander Correa Rodríguez
+# Autor: Felipe Alexander Correa Roríguez
 #-------------------------------------------------------------------------------------------
 
 """
 El programa se divide en dos partes principales:
 1. Interfaz de usuario moderna: Musestra una pantalla de inicio con animaciones simples y una interfaz de usuario moderna para configurar la simulación DLA.
-2. Simulación DLA: Implementa la simulación DLA con opciones de configuración avanzadas y visualización en tiempo real.
+2. Simulación DLA: Implementa la simulaciones de DLA con opciones de configuración avanzadas y visualización en tiempo real.
 3. Análisis de datos: Genera análisis detallado de la simulación DLA incluyendo distribución radial, dimensión fractal, anisotropía, densidad de ramificación y métricas adicionales.
 (La dimensión fractal es un concepto matemático que se utiliza para describir la complejidad de una estructura fractal, como la simulación DLA.)
 (La anisotropía es una medida de la variabilidad direccional de una estructura, en este caso, la distribución de partículas en la simulación DLA.)
@@ -546,6 +546,400 @@ def comienzasimu(config):
     return particle_positions, growth_times
 
 #-------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------
+
+def simulacion_arbol(screen, input_values):
+    """
+    Simulación DLA con estructura de árbol como semilla inicial y sesgo hacia el sur
+    """
+    SCREEN_SIZE = 800
+    GRID_SIZE = int(input_values["grid_size"])
+    NUM_PARTICLES = int(input_values["num_particles"])
+    MAX_STEPS = int(input_values["max_steps"])
+    STICKING_PROB = float(input_values["sticking_prob"]) / 100
+    
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+    
+    # Inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    particle_positions = []
+    growth_times = []
+    active_particles = []  # Lista para partículas en movimiento
+    
+    # Crear base del árbol en la parte inferior
+    base_y = GRID_SIZE - 1  # Parte inferior
+    center_x = GRID_SIZE // 2
+    tree_width = GRID_SIZE // 6
+    
+    # Crear base triangular
+    for i in range(tree_width):
+        for j in range(-i, i+1):
+            x = center_x + j
+            y = base_y - i
+            if 0 <= x < GRID_SIZE and 0 <= y < GRID_SIZE:
+                grid[y][x] = 1
+                particle_positions.append((y, x))
+                growth_times.append(0)
+
+    # Botones
+    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    
+    particles_added = len(particle_positions)
+    clock = pygame.time.Clock()
+    running = True
+    
+    while running:
+        clock.tick(60)  # Control de FPS para animación fluida
+        simulation_screen.fill((30, 30, 40))
+        
+        for event in pygame.event.get():
+            if save_button.eventoaccion(event):
+                guardasimu(simulation_screen)
+            if back_button.eventoaccion(event):
+                running = False
+
+        # Generar nuevas partículas desde arriba
+        if particles_added < NUM_PARTICLES and len(active_particles) < 50:
+            active_particles.append({
+                'x': random.randint(0, GRID_SIZE-1),
+                'y': 0,
+                'color': (255, 255, 255)  # Color blanco para partículas activas
+            })
+
+        # Actualizar partículas activas
+        new_active_particles = []
+        for particle in active_particles:
+            # Movimiento con sesgo hacia abajo
+            dx = random.choice([-1, 0, 1])
+            dy = random.randint(0, 2)  # Mayor probabilidad de ir hacia abajo
+            
+            new_x = int(particle['x'] + dx)
+            new_y = int(particle['y'] + dy)
+            
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                # Verificar vecinos
+                has_neighbor = False
+                for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
+                    check_x, check_y = new_x + nx, new_y + ny
+                    if (0 <= check_x < GRID_SIZE and 
+                        0 <= check_y < GRID_SIZE and 
+                        grid[check_y][check_x] == 1):
+                        has_neighbor = True
+                        break
+                
+                if has_neighbor and random.random() < STICKING_PROB:
+                    grid[new_y][new_x] = 1
+                    particle_positions.append((new_y, new_x))
+                    growth_times.append(pygame.time.get_ticks())
+                    particles_added += 1
+                else:
+                    particle['x'] = new_x
+                    particle['y'] = new_y
+                    new_active_particles.append(particle)
+            
+        active_particles = new_active_particles
+
+        # Dibujar estructura cristalina
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i][j] == 1:
+                    pygame.draw.rect(simulation_screen, (200, 220, 255),
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+
+        # Dibujar partículas activas
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, particle['color'],
+                             (int(particle['x'] * pixel_size + pixel_size/2),
+                              int(particle['y'] * pixel_size + pixel_size/2)),
+                             max(1, pixel_size//2))
+
+        # UI
+        save_button.draw(simulation_screen)
+        back_button.draw(simulation_screen)
+        
+        # Progreso
+        font = pygame.font.Font(None, 36)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = font.render(progress_text, True, (255, 255, 255))
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+        
+        pygame.display.flip()
+    
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    return particle_positions, growth_times
+
+
+#-------------------------------------------------------------------------------------------
+#esta simulación debe hacer esto:
+"""3. Repeat Project 1, Parts a and b, where the sticking probability is 0.33 for 
+contact with one particle, 0.67 for simultaneous contact with two particles, 
+and 1.0 for contact with three. Run the simulation a number of times and 
+discuss the results (Panoff 2004).
+"""
+
+def simulacion_probabilidades(screen, input_values): #esta funcion ocupa probabilidad de adhesión variable en la simulación, o sea el proyecto 3
+    """
+    Simulación DLA con probabilidades de adhesión variables
+    """
+    SCREEN_SIZE = 800
+    GRID_SIZE = int(input_values["grid_size"])
+    NUM_PARTICLES = int(input_values["num_particles"])
+    MAX_STEPS = int(input_values["max_steps"])
+    
+    # Crear pantalla de simulación
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+    
+    # Inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    particle_positions = []
+    growth_times = []
+    active_particles = []  # Lista para partículas en movimiento
+    
+    # Crear semilla en el centro
+    center = GRID_SIZE // 2
+    grid[center][center] = 1
+    particle_positions.append((center, center))
+    growth_times.append(0)
+    
+    # Botones
+    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    
+    particles_added = len(particle_positions)
+    clock = pygame.time.Clock()
+    running = True
+    
+    while running:
+        clock.tick(60)  # Control de FPS para animación fluida
+        simulation_screen.fill((30, 30, 40))
+        
+        for event in pygame.event.get():
+            if save_button.eventoaccion(event):
+                guardasimu(simulation_screen)
+            if back_button.eventoaccion(event):
+                running = False
+
+        # Generar nuevas partículas desde el borde
+        if particles_added < NUM_PARTICLES and len(active_particles) < 50:
+            active_particles.append({
+                'x': random.randint(0, GRID_SIZE-1),
+                'y': random.randint(0, GRID_SIZE-1),
+                'color': (255, 255, 255)  # Color blanco para partículas activas
+            })
+
+        # Actualizar partículas activas
+        new_active_particles = []
+        for particle in active_particles:
+            # Movimiento aleatorio
+            dx = random.choice([-1, 0, 1])
+            dy = random.choice([-1, 0,
+                                1])
+        
+            new_x = int(particle['x'] + dx)
+            
+            new_y = int(particle['y'] + dy)
+            
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                # Verificar vecinos
+                has_neighbor = False
+                for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
+                    check_x, check_y = new_x + nx, new_y + ny
+                    if (0 <= check_x < GRID_SIZE and 
+                        0 <= check_y < GRID_SIZE and 
+                        grid[check_y][check_x] == 1):
+                        has_neighbor = True
+                        break
+                
+                # Probabilidad de adhesión
+                sticking_prob = 0.33 if has_neighbor else 0.0
+                if random.random() < sticking_prob:
+                    grid[new_y][new_x] = 1
+                    particle_positions.append((new_y, new_x))
+                    growth_times.append(pygame.time.get_ticks())
+                    particles_added += 1
+                else:
+                    particle['x'] = new_x
+                    particle['y'] = new_y
+                    new_active_particles.append(particle)
+                    
+        active_particles = new_active_particles
+        
+        # Dibujar estructura cristalina
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i][j] == 1:
+                    pygame.draw.rect(simulation_screen, (200, 220, 255),
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+        
+        # Dibujar partículas activas
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, particle['color'],
+                             (int(particle['x'] * pixel_size + pixel_size/2),
+                              int(particle['y'] * pixel_size + pixel_size/2)),
+                             max(1, pixel_size//2))
+        
+        # UI
+        save_button.draw(simulation_screen)
+        back_button.draw(simulation_screen)
+        
+        # Progreso
+        font = pygame.font.Font(None, 36)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = font.render(progress_text, True, (255, 255, 255))
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+        
+        pygame.display.flip()
+        
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    
+    return particle_positions, growth_times
+
+#-------------------------------------------------------------------------------------------
+
+""" 4. La función debe hacer eso:
+a.  Repeat Project 2, Parts a and b, where the sticking probability is based on 
+the number of particles the walker contacts simultaneously. Run the simu
+lation a number of times and discuss the results (Panoff 2004).
+ b.  Adjust the situation so that the sticking probability is 0.1 for contact with 
+one particle, 0.5 for two particles, and 0.9 for three or more particles. Run 
+the simulation and animation a number of times and discuss the results 
+(Panoff 2004).
+ c.  Adjust the situation so that the sticking probability is 0.01 for contact with 
+one or two particles, 0.03 for three particles, and 1.0 for more than three 
+particles. Run the simulation a number of times and discuss the results 
+(Panoff 2004)."""
+
+#funciíon que cumple actividad 4a y 4b del proyecto 4
+def simulacion_probabilidades2(screen, input_values):
+    """
+    Simulación DLA con probabilidades de adhesión variables
+    """
+    SCREEN_SIZE = 800
+    GRID_SIZE = int(input_values["grid_size"])
+    NUM_PARTICLES = int(input_values["num_particles"])
+    MAX_STEPS = int(input_values["max_steps"])
+    
+    # Crear pantalla de simulación
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+    
+    # Inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    particle_positions = []
+    growth_times = []
+    active_particles = []  # Lista para partículas en movimiento
+    
+    # Crear semilla en el centro
+    center = GRID_SIZE // 2
+    grid[center][center] = 1
+    particle_positions.append((center, center))
+    growth_times.append(0)
+    
+    # Botones
+    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    
+    particles_added = len(particle_positions)
+    clock = pygame.time.Clock()
+    running = True
+    
+    while running:
+        clock.tick(60)  # Control de FPS para animación fluida
+        simulation_screen.fill((30, 30, 40))
+        
+        for event in pygame.event.get():
+            if save_button.eventoaccion(event):
+                guardasimu(simulation_screen)
+            if back_button.eventoaccion(event):
+                running = False
+
+        # Generar nuevas partículas desde el borde
+        if particles_added < NUM_PARTICLES and len(active_particles) < 50:
+            active_particles.append({
+                'x': random.randint(0, GRID_SIZE-1),
+                'y': random.randint(0, GRID_SIZE-1),
+                'color': (255, 255, 255)  # Color blanco para partículas activas
+            })
+
+        # Actualizar partículas activas
+        new_active_particles = []
+        for particle in active_particles:
+            # Movimiento aleatorio
+            dx = random.choice([-1, 0, 1])
+            dy = random.choice([-1, 0,
+                                1])
+            
+            new_x = int(particle['x'] + dx)
+            new_y = int(particle['y'] + dy)
+            
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                # Verificar vecinos
+                num_neighbors = 0
+                for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
+                    check_x, check_y = new_x + nx, new_y + ny
+                    if (0 <= check_x < GRID_SIZE and 
+                        0 <= check_y < GRID_SIZE and 
+                        grid[check_y][check_x] == 1):
+                        num_neighbors += 1
+                
+                # Probabilidad de adhesión
+                if num_neighbors == 1:
+                    sticking_prob = 0.1
+                elif num_neighbors == 2:
+                    sticking_prob = 0.5
+                else:
+                    sticking_prob = 0.9
+                
+                if random.random() < sticking_prob:
+                    grid[new_y][new_x] = 1
+                    particle_positions.append((new_y, new_x))
+                    growth_times.append(pygame.time.get_ticks())
+                    particles_added += 1
+                else:
+                    particle['x'] = new_x
+                    particle['y'] = new_y
+                    new_active_particles.append(particle)
+                    
+        active_particles = new_active_particles
+        
+        # Dibujar estructura cristalina
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i][j] == 1:
+                    pygame.draw.rect(simulation_screen, (200, 220, 255),
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+
+        # Dibujar partículas activas
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, particle['color'],
+                             (int(particle['x'] * pixel_size + pixel_size/2),
+                              int(particle['y'] * pixel_size + pixel_size/2)),
+                             max(1, pixel_size//2))
+            
+        # UI
+        save_button.draw(simulation_screen)
+        back_button.draw(simulation_screen)
+        
+        # Progreso
+        font = pygame.font.Font(None, 36)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = font.render(progress_text, True, (255, 255, 255))
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+        
+        pygame.display.flip()
+        
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    
+    return particle_positions, growth_times
+
+#-------------------------------------------------------------------------------------------
 
 def handle_input(event):
     """Maneja la entrada del usuario."""
@@ -618,7 +1012,7 @@ def welcomefe(screen, COLORS, FONTS):
         title_surf = FONTS['title'].render("DendriSIM", True, COLORS['text'])
         subtitle_surf = FONTS['subtitle'].render("Simulador de Agregación Limitada por Difusión", 
                                                True, COLORS['accent'])
-        version_surf = FONTS['text'].render("v2.1", True, COLORS['text'])
+        version_surf = FONTS['text'].render("v2.3", True, COLORS['text'])
         
         #aplicar escala al logo
         scaled_title = pygame.transform.scale(title_surf, 
@@ -650,6 +1044,413 @@ def welcomefe(screen, COLORS, FONTS):
         
         pygame.display.flip()
         pygame.time.Clock().tick(60)
+
+#-------------------------------------------------------------------------------------------
+"""12. Repeat any of Projects 1, using a launching circle instead of a launching 
+rectangle, of radius 2rmax
+ , where rmax
+ is the radius of the structure so far. De
+lete a walker if it travels too close to the boundary of the grid or beyond a 
+distance of 3rmax
+ from the seed. Such adjustments should speed the simula
+tion (Gould and Tobochnik 1988)."""
+
+# La función debe cumplir el proyecto 12:
+def simulacion_circulo(screen, input_values):
+    """
+    Simulación DLA con lanzamiento de partículas desde un círculo
+    """
+    SCREEN_SIZE = 800
+    GRID_SIZE = int(input_values["grid_size"])
+    NUM_PARTICLES = int(input_values["num_particles"])
+    MAX_STEPS = int(input_values["max_steps"])
+    STICKING_PROB = float(input_values["sticking_prob"]) / 100
+    
+    # Crear pantalla de simulación
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+    
+    # Inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    particle_positions = []
+    growth_times = []
+    active_particles = []  # Lista para partículas en movimiento
+    
+    # Crear semilla en el centro
+    center = GRID_SIZE // 2
+    grid[center][center] = 1
+    particle_positions.append((center, center))
+    growth_times.append(0)
+    
+    # Botones
+    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    
+    particles_added = len(particle_positions)
+    clock = pygame.time.Clock()
+    running = True
+    
+    while running:
+        clock.tick(60)  # Control de FPS para animación fluida
+        simulation_screen.fill((30, 30, 40))
+        
+        for event in pygame.event.get():
+            if save_button.eventoaccion(event):
+                guardasimu(simulation_screen)
+            if back_button.eventoaccion(event):
+                running = False
+
+        # Generar nuevas partículas desde el borde
+        if particles_added < NUM_PARTICLES and len(active_particles) < 50:
+            angle = random.uniform(0, 2 * math.pi)
+            radius = GRID_SIZE // 2
+            x = int(center + radius * math.cos(angle))
+            y = int(center + radius * math.sin(angle))
+            
+            active_particles.append({
+                'x': x,
+                'y': y,
+                'color': (255, 255, 255)  # Color blanco para partículas activas
+            })
+            
+        # Actualizar partículas activas
+        new_active_particles = []
+        for particle in active_particles:
+            # Movimiento aleatorio
+            dx = random.choice([-1, 0, 1])
+            dy = random.choice([-1, 0, 1])
+            
+            new_x = int(particle['x'] + dx)
+            new_y = int(particle['y'] + dy)
+            
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                # Verificar vecinos
+                has_neighbor = False
+                for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
+                    check_x, check_y = new_x + nx, new_y + ny
+                    if (0 <= check_x < GRID_SIZE and 
+                        0 <= check_y < GRID_SIZE and 
+                        grid[check_y][check_x] == 1):
+                        has_neighbor = True
+                        break
+                
+                if has_neighbor and random.random() < STICKING_PROB:
+                    grid[new_y][new_x] = 1
+                    particle_positions.append((new_y, new_x))
+                    growth_times.append(pygame.time.get_ticks())
+                    particles_added += 1
+                else:
+                    particle['x'] = new_x
+                    particle['y'] = new_y
+                    new_active_particles.append(particle)
+                    
+        active_particles = new_active_particles
+        
+        # Dibujar estructura cristalina
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i][j] == 1:
+                    pygame.draw.rect(simulation_screen, (200, 220, 255),
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+                    
+        # Dibujar partículas activas
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, particle['color'],
+                             (int(particle['x'] * pixel_size + pixel_size/2),
+                              int(particle['y'] * pixel_size + pixel_size/2)),
+                             max(1, pixel_size//2))
+            
+        # UI
+        save_button.draw(simulation_screen)
+        back_button.draw(simulation_screen)
+        
+        # Progreso
+        font = pygame.font.Font(None, 36)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = font.render(progress_text, True, (255, 255, 255))
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+        
+        pygame.display.flip()
+        
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    
+    return particle_positions, growth_times
+
+#-------------------------------------------------------------------------------------------
+"""7. Changing conditions affect crystalline formation and cause a great variety in 
+the shapes. During a simulation, we can vary the sticking probability to indi
+cate such changing conditions. Do Project 2, starting with sticking probabili
+ties as in Project 4, Part b. After forming an aggregate with a specified number 
+(such as 100) of particles, use sticking probabilities, as in Project 4c, for 
+a specified number (such as 100) of particles; then change to a different stick
+ing probability configuration (Panoff 2004)."""
+
+#Debería hacer esta actividad 7:
+def simulacion_probabilidades3(screen, input_values):
+    """
+    Simulación DLA con probabilidades de adhesión variables
+    """
+    SCREEN_SIZE = 800
+    GRID_SIZE = int(input_values["grid_size"])
+    NUM_PARTICLES = int(input_values["num_particles"])
+    MAX_STEPS = int(input_values["max_steps"])
+    
+    # Crear pantalla de simulación
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+    
+    # Inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    particle_positions = []
+    growth_times = []
+    active_particles = []  # Lista para partículas en movimiento
+    
+    # Crear semilla en el centro
+    center = GRID_SIZE // 2
+    grid[center][center] = 1
+    particle_positions.append((center, center))
+    growth_times.append(0)
+    
+    # Botones
+    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    
+    particles_added = len(particle_positions)
+    clock = pygame.time.Clock()
+    running = True
+    
+    while running:
+        clock.tick(60)  # Control de FPS para animación fluida
+        simulation_screen.fill((30, 30, 40))
+        
+        for event in pygame.event.get():
+            if save_button.eventoaccion(event):
+                guardasimu(simulation_screen)
+            if back_button.eventoaccion(event):
+                running = False
+
+        # Generar nuevas partículas desde el borde
+        if particles_added < NUM_PARTICLES and len(active_particles) < 50:
+            active_particles.append({
+                'x': random.randint(0, GRID_SIZE-1),
+                'y': random.randint(0, GRID_SIZE-1),
+                'color': (255, 255, 255)  # Color blanco para partículas activas
+            })
+
+        # Actualizar partículas activas
+        new_active_particles = []
+        for particle in active_particles:
+            # Movimiento aleatorio
+            dx = random.choice([-1, 0, 1])
+            dy = random.choice([-1, 0,
+                                1])
+            
+            new_x = int(particle['x'] + dx)
+            new_y = int(particle['y'] + dy)
+            
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                # Verificar vecinos
+                num_neighbors = 0
+                for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
+                    check_x, check_y = new_x + nx, new_y + ny
+                    if (0 <= check_x < GRID_SIZE and 
+                        0 <= check_y < GRID_SIZE and 
+                        grid[check_y][check_x] == 1):
+                        num_neighbors += 1
+                
+                # Cambiar probabilidades
+                if particles_added == 100:
+                    if num_neighbors <= 2:
+                        sticking_prob = 0.01
+                    else:
+                        sticking_prob = 0.03
+                elif particles_added == 200:
+                    if num_neighbors == 1:
+                        sticking_prob = 0.1
+                    elif num_neighbors == 2:
+                        sticking_prob = 0.5
+                    else:
+                        sticking_prob = 0.9
+                else:
+                    sticking_prob = 0.33
+                
+                if random.random() < sticking_prob:
+                    grid[new_y][new_x] = 1
+                    particle_positions.append((new_y, new_x))
+                    growth_times.append(pygame.time.get_ticks())
+                    particles_added += 1
+                else:
+                    particle['x'] = new_x
+                    particle['y'] = new_y
+                    new_active_particles.append(particle)
+                    
+        active_particles = new_active_particles
+        
+        # Dibujar estructura cristalina
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i][j] == 1:
+                    pygame.draw.rect(simulation_screen, (200, 220, 255),
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+                    
+        # Dibujar partículas activas
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, particle['color'],
+                             (int(particle['x'] * pixel_size + pixel_size/2),
+                              int(particle['y'] * pixel_size + pixel_size/2)),
+                             max(1, pixel_size//2))
+            
+        # UI
+        save_button.draw(simulation_screen)
+        back_button.draw(simulation_screen)
+        
+        # Progreso
+        font = pygame.font.Font(None, 36)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = font.render(progress_text, True, (255, 255, 255))
+        
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+        
+        pygame.display.flip()
+        
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    
+    return particle_positions, growth_times
+
+#-------------------------------------------------------------------------------------------
+"""Proyecto 10. using a launching circle instead of a launching  rectangle, of radius 2rmax , where rmax
+ is the radius of the structure so far. Delete a walker if it travels too close to the boundary of the grid or beyond a 
+distance of 3rmax from the seed. Such adjustments should speed the simulation (Gould and Tobochnik 1988)."""
+
+"""Proyecto 11. Do Project 10, with the following additional adjustment to speed the simulation
+by having larger step sizes further away from the structure: If a walker is 
+at a distance r > rmax + 4 from the seed, where rmax is the radius of the structure so far, 
+then have step sizes of length r – rmax – 2; otherwise, have step 
+sizes of length 1 (Gould and Tobochnik 1988)."""
+
+#Haz el Proyecto 11:
+def simulacion_circulo2(screen, input_values):
+    """
+    Simulación DLA con lanzamiento de partículas desde un círculo
+    """
+    SCREEN_SIZE = 800
+    GRID_SIZE = int(input_values["grid_size"])
+    NUM_PARTICLES = int(input_values["num_particles"])
+    MAX_STEPS = int(input_values["max_steps"])
+    STICKING_PROB = float(input_values["sticking_prob"]) / 100
+    
+    # Crear pantalla de simulación
+    simulation_screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+    pixel_size = SCREEN_SIZE // GRID_SIZE
+    
+    # Inicialización
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    particle_positions = []
+    growth_times = []
+    active_particles = []  # Lista para partículas en movimiento
+    
+    # Crear semilla en el centro
+    center = GRID_SIZE // 2
+    grid[center][center] = 1
+    particle_positions.append((center, center))
+    growth_times.append(0)
+    
+    # Botones
+    save_button = Button(20, 20, 150, 40, "GUARDAR", COLOR_BOTON, COLOR_BOTONHOVER)
+    back_button = Button(190, 20, 150, 40, "VOLVER", COLOR_BOTON, COLOR_BOTONHOVER)
+    
+    particles_added = len(particle_positions)
+    clock = pygame.time.Clock()
+    running = True
+    
+    while running:
+        clock.tick(60)  # Control de FPS para animación fluida
+        simulation_screen.fill((30, 30, 40))
+        
+        for event in pygame.event.get():
+            if save_button.eventoaccion(event):
+                guardasimu(simulation_screen)
+            if back_button.eventoaccion(event):
+                running = False
+
+        # Generar nuevas partículas desde el borde
+        if particles_added < NUM_PARTICLES and len(active_particles) < 50:
+            angle = random.uniform(0, 2 * math.pi)
+            radius = GRID_SIZE // 2
+            x = int(center + radius * math.cos(angle))
+            y = int(center + radius * math.sin(angle))
+            
+            active_particles.append({
+                'x': x,
+                'y': y,
+                'color': (255, 255, 255)  # Color blanco para partículas activas
+            })
+            
+        # Actualizar partículas activas
+        new_active_particles = []
+        for particle in active_particles:
+            # Movimiento aleatorio
+            dx = random.choice([-1, 0, 1])
+            dy = random.choice([-1, 0, 1])
+            
+            new_x = int(particle['x'] + dx)
+            new_y = int(particle['y'] + dy)
+            
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                # Verificar vecinos
+                has_neighbor = False
+                for nx, ny in [(0,1), (1,0), (0,-1), (-1,0)]:
+                    check_x, check_y = new_x + nx, new_y + ny
+                    if (0 <= check_x < GRID_SIZE and 
+                        0 <= check_y < GRID_SIZE and 
+                        grid[check_y][check_x] == 1):
+                        has_neighbor = True
+                        break
+                
+                if has_neighbor and random.random() < STICKING_PROB:
+                    grid[new_y][new_x] = 1
+                    particle_positions.append((new_y, new_x))
+                    growth_times.append(pygame.time.get_ticks())
+                    particles_added += 1
+                else:
+                    particle['x'] = new_x
+                    particle['y'] = new_y
+                    new_active_particles.append(particle)
+                    
+        active_particles = new_active_particles
+        
+        # Dibujar estructura cristalina
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if grid[i][j] == 1:
+                    pygame.draw.rect(simulation_screen, (200, 220, 255),
+                                   (j * pixel_size, i * pixel_size,
+                                    pixel_size, pixel_size))
+                    
+        # Dibujar partículas activas
+        for particle in active_particles:
+            pygame.draw.circle(simulation_screen, particle['color'],
+                             (int(particle['x'] * pixel_size + pixel_size/2),
+                              int(particle['y'] * pixel_size + pixel_size/2)),
+                             max(1, pixel_size//2))
+            
+        # UI
+        save_button.draw(simulation_screen)
+        back_button.draw(simulation_screen)
+        
+        # Progreso
+        font = pygame.font.Font(None, 36)
+        progress_text = f"Partículas: {particles_added}/{NUM_PARTICLES}"
+        text_surf = font.render(progress_text, True, (255, 255, 255))
+        simulation_screen.blit(text_surf, (20, SCREEN_SIZE - 40))
+        
+        pygame.display.flip()
+        
+    pygame.display.set_mode((ANCHO_DEFAULT, ALTURA_DEFAULT))
+    
+    return particle_positions, growth_times
 
 #-------------------------------------------------------------------------------------------
 #lógica del programa
@@ -728,6 +1529,19 @@ def main():
                                COLORS['button'], COLORS['button_hover'])
     boton_ayuda = ModernButton(50, 700, 250, 50, "AYUDA", 
                               COLORS['panel'], COLORS['input_active'])
+    #se agrega:
+    tree_button = ModernButton(450, 400, 250, 50, "SIMULACION ESP. ARBOL", 
+                                 COLORS['button'], COLORS['button_hover'])
+    probabilities_button = ModernButton(450, 460, 250, 50, "SIMULACION ESP. PROBA1", 
+                                 COLORS['button'], COLORS['button_hover'])
+    probabilidades2_button = ModernButton(450, 520, 250, 50, "SIMULACION ESP. PROBA2", 
+                                 COLORS['button'], COLORS['button_hover'])
+    boton_circulo = ModernButton(450, 580, 250, 50, "SIMULACION ESP. CIRCULO", 
+                                 COLORS['button'], COLORS['button_hover'])
+    probabilidades3_button = ModernButton(800, 400, 250, 50, "SIMULACION ESP. PROBA3", 
+                                 COLORS['button'], COLORS['button_hover'])
+    boton_circulo2 = ModernButton(800, 460, 250, 50, "SIMULACION ESP. CIRCULO2",
+                                    COLORS['button'], COLORS['button_hover'])
 
     #variables de estado
     running = True
@@ -807,6 +1621,12 @@ def main():
         #dibujar botones
         boton_start.draw(screen)
         boton_ayuda.draw(screen)
+        tree_button.draw(screen)
+        probabilities_button.draw(screen)
+        probabilidades2_button.draw(screen)
+        boton_circulo.draw(screen)
+        probabilidades3_button.draw(screen)
+        boton_circulo2.draw(screen)
 
         #panel de ayuda
         if help_visible:
@@ -834,7 +1654,7 @@ def main():
             for i, text in enumerate(help_texts):
                 text_surf = FONTS['text'].render(text, True, COLORS['text'])
                 screen.blit(text_surf, (220, 220 + i * 30))
-
+            
         #mensaje de error
         mensajitodeerror()
         if error_timer > 0:
@@ -878,6 +1698,30 @@ def main():
 
             if boton_ayuda.eventoaccion(event):
                 help_visible = not help_visible
+                
+            if tree_button.eventoaccion(event):
+                valores = {key: field["value"] for key, field in input_fields.items()}
+                simulacion_arbol(screen, valores)
+                
+            if probabilities_button.eventoaccion(event):
+                valores = {key: field["value"] for key, field in input_fields.items()}
+                simulacion_probabilidades(screen, valores)
+                
+            if probabilidades2_button.eventoaccion(event):
+                valores = {key: field["value"] for key, field in input_fields.items()}
+                simulacion_probabilidades2(screen, valores)
+            
+            if boton_circulo.eventoaccion(event):
+                valores = {key: field["value"] for key, field in input_fields.items()}
+                simulacion_circulo(screen, valores)
+            
+            if probabilidades3_button.eventoaccion(event):
+                valores = {key: field["value"] for key, field in input_fields.items()}
+                simulacion_probabilidades3(screen, valores)
+                
+            if boton_circulo2.eventoaccion(event):
+                valores = {key: field["value"] for key, field in input_fields.items()}
+                simulacion_circulo2(screen, valores)
 
         pygame.display.flip()
         clock.tick(60)
