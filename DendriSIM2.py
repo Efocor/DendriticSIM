@@ -21,7 +21,7 @@ La simulación DLA se puede configurar con los siguientes parámetros:
 - Número de partículas: Cantidad total de partículas a simular. (3000 por defecto, más partículas hacen más lenta la simulación)
 - Tamaño de la cuadrícula: Dimensiones del espacio de simulación. (100 por defecto, más tamaño hace más lenta la simulación y a su vez depende de la resolución del PC)
 - Pasos máximos: Límite de movimientos por partícula. (500 por defecto, los pasos son los movimientos que puede hacer una partícula, su cantidad de movimientos)
-- Probabilidad de adhesión: Chance de que una partícula se adhiera (%). (50% por defecto, no funciona con valores float o negativos)
+- Probabilidad de adhesión (vista como su opuesto, la probabilidad de difusión): Chance de que una partícula se adhiera (%). (50% por defecto, no funciona con valores float o negativos)
 - Dirección del viento: 0: Deshabilitado, 1: Norte, 2: Sur, 3: Este, 4: Oeste. (0 por defecto, esto es para la dirección del viento)
 - Fuerza del viento: Intensidad del efecto del viento (%). (Hay que escoger una dirección para que se active lo de la la fuerza)
 - Tipo de vecinos: 4 para von Neumann, 8 para Moore. (Esto es básicamente si se consideran 4 o 8 vecinos, o sea si se mueve en diagonal o no)
